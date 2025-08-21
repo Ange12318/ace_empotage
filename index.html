@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des BL</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Reset et variables */
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #2563eb;
+            --secondary: #1e40af;
+            --accent: #60a5fa;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --light: #ffffff;
+            --dark: #1f2937;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --border-radius: 12px;
+            --border-radius-sm: 8px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            line-height: 1.6;
+            color: var(--gray-800);
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            min-height: 100vh;
+        }
+
+        .app-container { display: flex; flex-direction: column; min-height: 100vh; }
+
+        .app-header {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+            position: sticky; top: 0; z-index: 100; padding: 1rem 0;
+        }
+
+        .header-content {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 2rem; max-width: 1600px; margin: 0 auto; width: 100%;
+        }
+
+        .header-content h1 {
+            font-size: 1.75rem; font-weight: 700; color: white; display: flex; align-items: center; gap: 0.75rem; text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header-content h1 i {
+            background: linear-gradient(45deg, #60a5fa, #3b82f6);
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-size: 2rem;
+        }
+
+        .app-layout {
+            display: flex; flex: 1; max-width: 1600px; margin: 0 auto; width: 100%;
+            gap: 1.5rem; padding: 1.5rem 2rem;
+        }
+
+        .app-sidebar {
+            width: 250px; background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px); border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg); padding: 1.5rem; height: fit-content;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .sidebar-title { font-size: 1.1rem; font-weight: 600; color: var(--gray-700); margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        .nav-item {
+            display: flex; align-items: center; padding: 1rem 1.25rem; border-radius: var(--border-radius-sm);
+            margin-bottom: 0.75rem; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            gap: 1rem; font-weight: 500; position: relative; overflow: hidden;
+        }
+        .nav-item::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s; }
+        .nav-item:hover::before { left: 100%; }
+        .nav-item:hover { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; transform: translateY(-2px); box-shadow: var(--shadow); }
+        .nav-item.active { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; box-shadow: var(--shadow); }
+        .nav-item i { width: 1.5rem; text-align: center; font-size: 1.1rem; }
+
+        .app-main { flex: 1; min-width: 0; }
+        .view-content { display: none; animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px);} to { opacity: 1; transform: translateY(0);} }
+
+        .search-card, .form-card, .table-card {
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg); margin-bottom: 2rem; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .search-card:hover, .form-card:hover, .table-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-xl); }
+
+        .card-header {
+            padding: 1.5rem 2rem; background: linear-gradient(135deg, var(--gray-50), var(--gray-100));
+            border-bottom: 1px solid var(--gray-200); display: flex; justify-content: space-between; align-items: center;
+        }
+        .card-header h2 {
+            font-size: 1.375rem; font-weight: 700; background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 0.75rem;
+        }
+
+        .filter-form, .bl-form { padding: 2rem; }
+        .filter-grid, .form-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;
+        }
+        .filter-group, .form-group { position: relative; }
+
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 600; color: var(--gray-700);
+            text-transform: uppercase; letter-spacing: 0.025em; }
+
+        select, input[type="text"], input[type="number"], input[type="date"] {
+            width: 100%; padding: 0.875rem 1rem; border: 2px solid var(--gray-200);
+            border-radius: var(--border-radius-sm); font-size: 0.95rem; transition: all 0.3s ease; background: white; color: var(--gray-800);
+        }
+        select:focus, input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); transform: translateY(-1px); }
+
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; padding: 0.875rem 1.5rem;
+            border-radius: var(--border-radius-sm); font-size: 0.925rem; font-weight: 600; cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: none; gap: 0.5rem; text-transform: uppercase; letter-spacing: 0.025em;
+            position: relative; overflow: hidden;
+        }
+        .btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); transition: left 0.5s; }
+        .btn:hover::before { left: 100%; }
+        .primary-btn { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; box-shadow: var(--shadow); }
+        .primary-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .secondary-btn { background: white; color: var(--primary); border: 2px solid var(--primary); }
+        .secondary-btn:hover { background: var(--primary); color: white; transform: translateY(-2px); box-shadow: var(--shadow); }
+        .filter-actions, .form-actions { display: flex; gap: 1rem; justify-content: flex-end; flex-wrap: wrap; }
+
+        .table-controls { display: flex; align-items: center; gap: 1rem; }
+        .group-option { display: flex; align-items: center; gap: 0.5rem; }
+        .group-option input[type="checkbox"] { width: 1.25rem; height: 1.25rem; accent-color: var(--primary); }
+        .group-option label { font-size: 0.9rem; font-weight: 500; margin: 0; color: var(--gray-700); text-transform: none; letter-spacing: normal; }
+
+        .table-responsive { overflow-x: auto; border-radius: var(--border-radius-sm); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: white; min-width: 1200px; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); }
+        th {
+            background: linear-gradient(135deg, var(--gray-100), var(--gray-200)); font-weight: 700; color: var(--gray-800);
+            text-transform: uppercase; letter-spacing: 0.025em; font-size: 0.75rem; position: sticky; top: 0; z-index: 10;
+        }
+        tbody tr { transition: all 0.2s ease; }
+        tbody tr:hover { background: var(--gray-50); transform: scale(1.001); }
+        tbody tr.completed { background: linear-gradient(135deg, #ecfdf5, #f0fdf4); }
+        tbody tr.group-summary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; font-weight: 600; }
+
+        .relance-cell { font-size: 0.8rem; font-weight: 600; color: var(--gray-600); }
+        .alert-cell { font-size: 0.8rem; font-weight: 600; color: var(--warning); }
+
+        .status-btn { padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.025em; }
+        .status-pending { background: linear-gradient(135deg, var(--warning), #fbbf24); color: white; }
+        .status-completed { background: linear-gradient(135deg, var(--success), #059669); color: white; }
+        .status-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+
+        .icon-btn {
+            width: 2.5rem; height: 2.5rem; padding: 0; border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(10px);
+        }
+        .icon-btn:hover { background: rgba(255, 255, 255, 0.3); transform: scale(1.1); }
+
+        @media (max-width: 768px) {
+            .app-layout { padding: 1rem; gap: 1rem; }
+            .header-content { padding: 0 1rem; }
+            .app-sidebar {
+                position: fixed; top: 80px; left: 1rem; right: 1rem; width: auto;
+                transform: translateY(-100vh); z-index: 90; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .app-sidebar.active { transform: translateY(0); }
+            .filter-grid, .form-grid { grid-template-columns: 1fr; gap: 1rem; }
+            .filter-actions, .form-actions { flex-direction: column; }
+            .btn { width: 100%; }
+            .card-header { padding: 1rem; flex-direction: column; gap: 1rem; align-items: flex-start; }
+            .table-responsive { font-size: 0.75rem; }
+            th, td { padding: 0.5rem 0.25rem; }
+        }
+
+        @media (max-width: 480px) {
+            .header-content h1 { font-size: 1.25rem; }
+            .header-content h1 i { font-size: 1.5rem; }
+            .app-layout { padding: 0.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <h1><i class="fas fa-file-invoice"></i> Gestion des BL</h1>
+                <button id="toggleMenu" class="icon-btn"><i class="fas fa-bars"></i></button>
+            </div>
+        </header>
+
+        <div class="app-layout">
+            <aside class="app-sidebar">
+                <div class="sidebar-title">Navigation</div>
+                <nav>
+                    <ul style="list-style: none;">
+                        <li class="nav-item active" data-view="dashboard"><i class="fas fa-chart-line"></i> Tableau de bord</li>
+                        <li class="nav-item" data-view="new-bl"><i class="fas fa-plus-circle"></i> Nouveau BL</li>
+                    </ul>
+                </nav>
+            </aside>
+
+            <main class="app-main">
+                <div id="dashboard-view" class="view-content" style="display: block;">
+                    <section class="search-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-search"></i> Recherche Avancée</h2>
+                        </div>
+                        <form id="searchForm" class="filter-form">
+                            <div class="filter-grid">
+                                <div class="filter-group">
+                                    <label for="search_banque">Banque</label>
+                                    <select id="search_banque" name="banque">
+                                        <option value="">Toutes les banques</option>
+                                        <option value="BNI">BNI</option>
+                                        <option value="Ecobank">Ecobank</option>
+                                        <option value="UBA">UBA</option>
+                                        <option value="SGCI">SGCI</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label for="search_client">Client</label>
+                                    <select id="search_client" name="client">
+                                        <option value="">Tous les clients</option>
+                                        <option value="Client 1">Client 1</option>
+                                        <option value="Client 2">Client 2</option>
+                                        <option value="Client 3">Client 3</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label for="search_transitaire">Transitaire</label>
+                                    <select id="search_transitaire" name="transitaire">
+                                        <option value="">Tous les transitaires</option>
+                                        <option value="Moussa">Moussa</option>
+                                        <option value="Transitaire 2">Transitaire 2</option>
+                                        <option value="Transitaire 3">Transitaire 3</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="filter-actions">
+                                <button type="submit" class="btn primary-btn"><i class="fas fa-search"></i> Rechercher</button>
+                                <button type="reset" class="btn secondary-btn"><i class="fas fa-undo"></i> Réinitialiser</button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <section class="table-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-list"></i> Liste des BL</h2>
+                            <div class="table-controls">
+                                <div class="group-option">
+                                    <input type="checkbox" id="groupSimilar" checked>
+                                    <label for="groupSimilar">Regrouper les similaires</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="blTable">
+                                <thead>
+                                    <tr>
+                                        <th><i class="fas fa-university"></i> Banque</th>
+                                        <th><i class="fas fa-user"></i> Client</th>
+                                        <th><i class="fas fa-truck"></i> Transitaire</th>
+                                        <th><i class="fas fa-box"></i> Produit</th>
+                                        <th><i class="fas fa-hashtag"></i> N°DAS</th>
+                                        <th><i class="fas fa-weight"></i> Poids</th>
+                                        <th><i class="fas fa-calendar"></i> Date Empotage</th>
+                                        <th><i class="fas fa-bell"></i> R1</th>
+                                        <th><i class="fas fa-bell"></i> R2</th>
+                                        <th><i class="fas fa-bell"></i> R3</th>
+                                        <th><i class="fas fa-bell"></i> R4</th>
+                                        <th><i class="fas fa-exclamation-triangle"></i> Alerte Banque</th>
+                                        <th><i class="fas fa-tasks"></i> Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Rempli dynamiquement -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <div id="new-bl-view" class="view-content">
+                    <section class="form-card">
+                        <div class="card-header">
+                            <h2><i class="fas fa-plus-circle"></i> Créer un nouveau BL</h2>
+                        </div>
+                        <form id="blForm" class="bl-form">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="banque">Banque déposante</label>
+                                    <select id="banque" name="banque" required>
+                                        <option value="">Sélectionnez une banque</option>
+                                        <option value="BNI">BNI</option>
+                                        <option value="Ecobank">Ecobank</option>
+                                        <option value="UBA">UBA</option>
+                                        <option value="SGCI">SGCI</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="client">Client</label>
+                                    <select id="client" name="client" required>
+                                        <option value="">Sélectionnez un client</option>
+                                        <option value="Client 1">Client 1</option>
+                                        <option value="Client 2">Client 2</option>
+                                        <option value="Client 3">Client 3</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="transitaire">Transitaire</label>
+                                    <select id="transitaire" name="transitaire" required>
+                                        <option value="">Sélectionnez un transitaire</option>
+                                        <option value="Moussa">Moussa</option>
+                                        <option value="Transitaire 2">Transitaire 2</option>
+                                        <option value="Transitaire 3">Transitaire 3</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="produit">Produit</label>
+                                    <input type="text" id="produit" name="produit" required placeholder="Nom du produit">
+                                </div>
+                                <div class="form-group">
+                                    <label for="numero_das">N° DAS</label>
+                                    <input type="text" id="numero_das" name="numero_das" required placeholder="Numéro DAS">
+                                </div>
+                                <div class="form-group">
+                                    <label for="poids">Poids (kg)</label>
+                                    <input type="number" id="poids" name="poids" step="0.01" min="0" required placeholder="0.00">
+                                </div>
+                                <div class="form-group">
+                                    <label for="date_accord_banque">Date accord banque</label>
+                                    <input type="date" id="date_accord_banque" name="date_accord_banque">
+                                </div>
+                                <div class="form-group">
+                                    <label for="date_empotage">Date empotage</label>
+                                    <input type="date" id="date_empotage" name="date_empotage">
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn primary-btn"><i class="fas fa-save"></i> Enregistrer</button>
+                                <button type="reset" class="btn secondary-btn"><i class="fas fa-times"></i> Annuler</button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const API_URL = 'bl_api.php'; // même dossier
+
+            // Éléments DOM
+            const blForm = document.getElementById('blForm');
+            const searchForm = document.getElementById('searchForm');
+            const tableBody = document.querySelector('#blTable tbody');
+            const groupSimilarCheckbox = document.getElementById('groupSimilar');
+            const toggleMenuBtn = document.getElementById('toggleMenu');
+            const sidebar = document.querySelector('.app-sidebar');
+            const navItems = document.querySelectorAll('.nav-item');
+            const views = {
+                dashboard: document.getElementById('dashboard-view'),
+                'new-bl': document.getElementById('new-bl-view')
+            };
+
+            // Données en mémoire (chargées depuis l'API)
+            let bls = [];
+
+            // Initialisation
+            initNavigation();
+            loadBLs();
+
+            // Événements
+            blForm.addEventListener('submit', handleFormSubmit);
+            searchForm.addEventListener('submit', (e) => { e.preventDefault(); updateTable(); });
+            searchForm.addEventListener('reset', () => setTimeout(updateTable, 50));
+            groupSimilarCheckbox.addEventListener('change', updateTable);
+            toggleMenuBtn.addEventListener('click', () => sidebar.classList.toggle('active'));
+
+            function initNavigation() {
+                navItems.forEach(item => {
+                    item.addEventListener('click', function() {
+                        const view = this.getAttribute('data-view');
+                        showView(view);
+                        navItems.forEach(nav => nav.classList.remove('active'));
+                        this.classList.add('active');
+                        if (window.innerWidth < 768) sidebar.classList.remove('active');
+                    });
+                });
+            }
+            function showView(viewName) {
+                Object.values(views).forEach(v => v && (v.style.display = 'none'));
+                if (views[viewName]) views[viewName].style.display = 'block';
+            }
+
+            // Utils date
+            function addDays(date, n) { const d = new Date(date); d.setDate(d.getDate() + n); return d; }
+            function formatISO(date) {
+                const d = new Date(date);
+                const m = String(d.getMonth()+1).padStart(2,'0');
+                const day = String(d.getDate()).padStart(2,'0');
+                return `${d.getFullYear()}-${m}-${day}`;
+            }
+            function formatDisplay(date) {
+                if (!date) return '-';
+                const d = new Date(date);
+                if (Number.isNaN(d.getTime())) return '-';
+                const m = String(d.getMonth()+1).padStart(2,'0');
+                const day = String(d.getDate()).padStart(2,'0');
+                return `${day}/${m}/${d.getFullYear()}`;
+            }
+
+            function calculateRelances(dateEmpotage) {
+                if (!dateEmpotage) return {};
+                const r1 = addDays(dateEmpotage, 22);
+                const r2 = addDays(r1, 7);
+                const r3 = addDays(r2, 7);
+                const r4 = addDays(r3, 7);
+                const alerte = addDays(r4, 60);
+                return {
+                    relance_r1: formatISO(r1),
+                    relance_r2: formatISO(r2),
+                    relance_r3: formatISO(r3),
+                    relance_r4: formatISO(r4),
+                    date_alerte_banque: formatISO(alerte)
+                };
+            }
+
+            async function loadBLs() {
+                try {
+                    const res = await fetch(API_URL);
+                    bls = await res.json();
+                    updateTable();
+                } catch (e) {
+                    showNotification("Erreur de chargement des BL", "error");
+                    console.error(e);
+                }
+            }
+
+            async function handleFormSubmit(e) {
+                e.preventDefault();
+                const formData = new FormData(blForm);
+                const blData = Object.fromEntries(formData.entries());
+
+                // Cast & calculs
+                blData.poids = parseFloat(blData.poids || '0');
+                if (blData.date_empotage) {
+                    Object.assign(blData, calculateRelances(blData.date_empotage));
+                }
+                blData.statut = 'pending';
+
+                try {
+                    const res = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(blData)
+                    });
+                    const data = await res.json();
+                    showNotification(data.message || 'BL créé', 'success');
+                    blForm.reset();
+                    document.querySelector('.nav-item[data-view="dashboard"]').click();
+                    await loadBLs();
+                } catch (e) {
+                    showNotification("Erreur lors de l'enregistrement", "error");
+                    console.error(e);
+                }
+            }
+
+            function filterBLs(items, filters) {
+                return items.filter(bl => {
+                    return (!filters.banque || bl.banque === filters.banque) &&
+                           (!filters.client || bl.client === filters.client) &&
+                           (!filters.transitaire || bl.transitaire === filters.transitaire);
+                });
+            }
+
+            function groupSimilarBLs(items) {
+                const res = [];
+                let i = 0;
+                const arr = [...items].sort((a,b) => (a.banque+a.transitaire).localeCompare(b.banque+b.transitaire));
+                while (i < arr.length) {
+                    const cur = arr[i];
+                    let j = i;
+                    let total = 0;
+                    let count = 0;
+                    while (j < arr.length && arr[j].banque === cur.banque && arr[j].transitaire === cur.transitaire) {
+                        total += parseFloat(arr[j].poids) || 0;
+                        count++; j++;
+                    }
+                    res.push(...arr.slice(i, j));
+                    if (count > 1) {
+                        res.push({ isSummary: true, banque: cur.banque, transitaire: cur.transitaire, count, totalPoids: total.toFixed(2) });
+                    }
+                    i = j;
+                }
+                return res;
+            }
+
+            function updateTable() {
+                const filters = Object.fromEntries(new FormData(searchForm).entries());
+                const shouldGroup = groupSimilarCheckbox.checked;
+                let rows = filterBLs(bls, filters);
+                if (shouldGroup) rows = groupSimilarBLs(rows);
+                renderTable(rows);
+            }
+
+            function renderTable(items) {
+                tableBody.innerHTML = '';
+                if (!items.length) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="13" style="text-align:center; padding:3rem; color: var(--gray-500); font-style: italic;">
+                        <i class="fas fa-inbox" style="font-size:2rem; margin-bottom:1rem; display:block;"></i>Aucun BL trouvé
+                    </td>`;
+                    tableBody.appendChild(row);
+                    return;
+                }
+
+                items.forEach(item => {
+                    const tr = document.createElement('tr');
+
+                    if (item.isSummary) {
+                        tr.classList.add('group-summary');
+                        tr.innerHTML = `
+                            <td><i class="fas fa-layer-group"></i></td>
+                            <td></td><td></td>
+                            <td><strong>Total (${item.count} BL)</strong></td>
+                            <td><strong>${item.count}</strong></td>
+                            <td><strong>${item.totalPoids} kg</strong></td>
+                            <td></td><td></td><td></td><td></td><td></td><td></td><td></td>`;
+                    } else {
+                        if (item.statut === 'completed') tr.classList.add('completed');
+                        tr.innerHTML = `
+                            <td><i class="fas fa-university"></i> ${item.banque}</td>
+                            <td><i class="fas fa-user"></i> ${item.client}</td>
+                            <td><i class="fas fa-truck"></i> ${item.transitaire}</td>
+                            <td><i class="fas fa-box"></i> ${item.produit}</td>
+                            <td><i class="fas fa-hashtag"></i> ${item.numero_das}</td>
+                            <td><i class="fas fa-weight"></i> ${item.poids} kg</td>
+                            <td><i class="fas fa-calendar"></i> ${formatDisplay(item.date_empotage)}</td>
+                            <td class="relance-cell">${formatDisplay(item.relance_r1)}</td>
+                            <td class="relance-cell">${formatDisplay(item.relance_r2)}</td>
+                            <td class="relance-cell">${formatDisplay(item.relance_r3)}</td>
+                            <td class="relance-cell">${formatDisplay(item.relance_r4)}</td>
+                            <td class="alert-cell">${formatDisplay(item.date_alerte_banque)}</td>
+                            <td>
+                                <button class="status-btn ${item.statut === 'completed' ? 'status-completed' : 'status-pending'}" data-id="${item.id}" data-status="${item.statut}">
+                                    <i class="fas ${item.statut === 'completed' ? 'fa-check-circle' : 'fa-clock'}"></i>
+                                    ${item.statut === 'completed' ? 'Terminé' : 'En cours'}
+                                </button>
+                            </td>`;
+                    }
+                    tableBody.appendChild(tr);
+                });
+
+                // binder actions
+                document.querySelectorAll('.status-btn').forEach(btn => {
+                    btn.addEventListener('click', async function() {
+                        const id = this.getAttribute('data-id');
+                        const current = this.getAttribute('data-status');
+                        const next = current === 'completed' ? 'pending' : 'completed';
+                        try {
+                            const res = await fetch(`${API_URL}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                                body: new URLSearchParams({ id, statut: next }).toString()
+                            });
+                            const data = await res.json();
+                            showNotification(data.message || 'Statut mis à jour', 'success');
+                            await loadBLs();
+                        } catch (e) {
+                            showNotification("Erreur de mise à jour du statut", "error");
+                            console.error(e);
+                        }
+                    });
+                });
+            }
+
+            function showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed; top: 20px; right: 20px; padding: 1rem 1.5rem; border-radius: 8px; color: white; font-weight: 600;
+                    z-index: 1000; transform: translateX(400px); transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                `;
+                notification.style.background = type === 'success'
+                    ? 'linear-gradient(135deg, var(--success), #059669)'
+                    : (type === 'error' ? 'linear-gradient(135deg, var(--danger), #dc2626)' : 'linear-gradient(135deg, var(--primary), var(--secondary))');
+                notification.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : (type==='error'?'times':'info')}-circle"></i> ${message}`;
+                document.body.appendChild(notification);
+                setTimeout(() => { notification.style.transform = 'translateX(0)'; }, 100);
+                setTimeout(() => {
+                    notification.style.transform = 'translateX(400px)';
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+            }
+
+            // Raccourcis clavier
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'n') { e.preventDefault(); document.querySelector('.nav-item[data-view="new-bl"]').click(); }
+                if (e.key === 'Escape' && sidebar.classList.contains('active')) sidebar.classList.remove('active');
+            });
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768 && sidebar.classList.contains('active')) sidebar.classList.remove('active');
+            });
+            setTimeout(() => { document.body.style.opacity = '1'; }, 100);
+        });
+    </script>
+</body>
+</html>
