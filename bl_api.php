@@ -60,20 +60,114 @@ if ($method === 'POST') {
 }
 
 if ($method === 'PUT') {
-    // Mise à jour du statut
-    parse_str(file_get_contents("php://input"), $input);
+    $input = json_decode(file_get_contents("php://input"), true) ?? [];
     $id = intval($input['id'] ?? 0);
-    $statut = $input['statut'] ?? 'pending';
-    if (!$id || !in_array($statut, ['pending','completed'])) {
+
+    if (!$id) {
         http_response_code(400);
-        echo json_encode(["error" => "Paramètres invalides"]);
+        echo json_encode(["error" => "ID requis"]);
         exit;
     }
-    $stmt = $pdo->prepare("UPDATE bl SET statut = :s WHERE id = :id");
-    $stmt->execute([':s' => $statut, ':id' => $id]);
-    echo json_encode(["message" => "Statut mis à jour"]);
+
+    // Vérifier si le BL existe
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM bl WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+    if ($stmt->fetchColumn() == 0) {
+        http_response_code(404);
+        echo json_encode(["error" => "BL non trouvé"]);
+        exit;
+    }
+
+    // Mise à jour du statut uniquement
+    if (isset($input['statut']) && count($input) === 2) {
+        $statut = in_array($input['statut'], ['pending', 'completed']) ? $input['statut'] : 'pending';
+        $sql = "UPDATE bl SET statut = :statut WHERE id = :id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([':id' => $id, ':statut' => $statut]);
+        echo json_encode(["message" => "Statut mis à jour avec succès"]);
+        exit;
+    }
+
+    // Mise à jour complète
+    $banque = trim($input['banque'] ?? '');
+    $client = trim($input['client'] ?? '');
+    $transitaire = trim($input['transitaire'] ?? '');
+    $produit = trim($input['produit'] ?? '');
+    $numero_das = trim($input['numero_das'] ?? '');
+    $poids = floatval($input['poids'] ?? 0);
+    $date_accord_banque = $input['date_accord_banque'] ?: null;
+    $date_empotage = $input['date_empotage'] ?: null;
+    $relance_r1 = $input['relance_r1'] ?: null;
+    $relance_r2 = $input['relance_r2'] ?: null;
+    $relance_r3 = $input['relance_r3'] ?: null;
+    $relance_r4 = $input['relance_r4'] ?: null;
+    $date_alerte_banque = $input['date_alerte_banque'] ?: null;
+    $statut = in_array(($input['statut'] ?? 'pending'), ['pending','completed']) ? $input['statut'] : 'pending';
+
+    $sql = "UPDATE bl SET 
+            banque = :banque,
+            client = :client,
+            transitaire = :transitaire,
+            produit = :produit,
+            numero_das = :numero_das,
+            poids = :poids,
+            date_accord_banque = :date_accord_banque,
+            date_empotage = :date_empotage,
+            relance_r1 = :relance_r1,
+            relance_r2 = :relance_r2,
+            relance_r3 = :relance_r3,
+            relance_r4 = :relance_r4,
+            date_alerte_banque = :date_alerte_banque,
+            statut = :statut
+            WHERE id = :id";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([
+        ':id' => $id,
+        ':banque' => $banque,
+        ':client' => $client,
+        ':transitaire' => $transitaire,
+        ':produit' => $produit,
+        ':numero_das' => $numero_das,
+        ':poids' => $poids,
+        ':date_accord_banque' => $date_accord_banque,
+        ':date_empotage' => $date_empotage,
+        ':relance_r1' => $relance_r1,
+        ':relance_r2' => $relance_r2,
+        ':relance_r3' => $relance_r3,
+        ':relance_r4' => $relance_r4,
+        ':date_alerte_banque' => $date_alerte_banque,
+        ':statut' => $statut
+    ]);
+    echo json_encode(["message" => "BL mis à jour avec succès"]);
+    exit;
+}
+
+if ($method === 'DELETE') {
+    $input = json_decode(file_get_contents("php://input"), true) ?? [];
+    $id = intval($input['id'] ?? 0);
+
+    if (!$id) {
+        http_response_code(400);
+        echo json_encode(["error" => "ID requis"]);
+        exit;
+    }
+
+    // Vérifier si le BL existe
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM bl WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+    if ($stmt->fetchColumn() == 0) {
+        http_response_code(404);
+        echo json_encode(["error" => "BL non trouvé"]);
+        exit;
+    }
+
+    // Supprimer le BL
+    $stmt = $pdo->prepare("DELETE FROM bl WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+    echo json_encode(["message" => "BL supprimé avec succès"]);
     exit;
 }
 
 http_response_code(405);
 echo json_encode(["error" => "Méthode non autorisée"]);
+?>

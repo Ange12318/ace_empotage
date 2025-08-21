@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestion des BL</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         /* Reset et variables */
         :root {
@@ -43,6 +45,8 @@
             color: var(--gray-800);
             background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
             min-height: 100vh;
+            opacity: 0;
+            transition: opacity 0.5s ease;
         }
 
         .app-container { display: flex; flex-direction: column; min-height: 100vh; }
@@ -67,41 +71,33 @@
             -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-size: 2rem;
         }
 
-        .app-layout {
-            display: flex; flex: 1; max-width: 1600px; margin: 0 auto; width: 100%;
-            gap: 1.5rem; padding: 1.5rem 2rem;
+        .nav-menu {
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding: 0.5rem 2rem;
+            display: flex; justify-content: center; gap: 2rem; max-width: 1600px; margin: 0 auto;
         }
-
-        .app-sidebar {
-            width: 250px; background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px); border-radius: var(--border-radius);
-            box-shadow: var(--shadow-lg); padding: 1.5rem; height: fit-content;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .sidebar-title { font-size: 1.1rem; font-weight: 600; color: var(--gray-700); margin-bottom: 1.5rem; text-transform: uppercase; letter-spacing: 0.05em; }
-
         .nav-item {
-            display: flex; align-items: center; padding: 1rem 1.25rem; border-radius: var(--border-radius-sm);
-            margin-bottom: 0.75rem; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            gap: 1rem; font-weight: 500; position: relative; overflow: hidden;
+            display: inline-flex; align-items: center; padding: 0.75rem 1.5rem; border-radius: var(--border-radius-sm);
+            cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-weight: 500;
+            color: var(--gray-700); text-transform: uppercase; letter-spacing: 0.05em; position: relative; overflow: hidden;
         }
         .nav-item::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: left 0.5s; }
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); transition: left 0.5s; }
         .nav-item:hover::before { left: 100%; }
         .nav-item:hover { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; transform: translateY(-2px); box-shadow: var(--shadow); }
         .nav-item.active { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; box-shadow: var(--shadow); }
-        .nav-item i { width: 1.5rem; text-align: center; font-size: 1.1rem; }
+        .nav-item i { margin-right: 0.5rem; font-size: 1.1rem; }
 
-        .app-main { flex: 1; min-width: 0; }
+        .app-main {
+            flex: 1; max-width: 1600px; margin: 0 auto; width: 100%; padding: 2rem;
+            display: grid; grid-template-columns: 1fr; gap: 2rem;
+        }
         .view-content { display: none; animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px);} to { opacity: 1; transform: translateY(0);} }
 
         .search-card, .form-card, .table-card {
             background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: var(--border-radius);
-            box-shadow: var(--shadow-lg); margin-bottom: 2rem; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: var(--shadow-lg); overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.2);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         .search-card:hover, .form-card:hover, .table-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-xl); }
@@ -115,20 +111,24 @@
             -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 0.75rem;
         }
 
-        .filter-form, .bl-form { padding: 2rem; }
-        .filter-grid, .form-grid {
+        .filter-form, .bl-form, .login-form { padding: 2rem; }
+        .filter-grid, .form-grid, .login-grid {
             display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;
         }
-        .filter-group, .form-group { position: relative; }
+        .filter-group, .form-group, .login-group { position: relative; }
 
         label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 600; color: var(--gray-700);
             text-transform: uppercase; letter-spacing: 0.025em; }
 
-        select, input[type="text"], input[type="number"], input[type="date"] {
-            width: 100%; padding: 0.875rem 1rem; border: 2px solid var(--gray-200);
+        select, input[type="text"], input[type="number"], input[type="date"], input[type="password"] {
+            width: 100%; padding: 0.875rem 1rem 0.875rem 2.5rem; border: 2px solid var(--gray-200);
             border-radius: var(--border-radius-sm); font-size: 0.95rem; transition: all 0.3s ease; background: white; color: var(--gray-800);
         }
         select:focus, input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); transform: translateY(-1px); }
+
+        .input-icon {
+            position: absolute; left: 0.75rem; top: 2.5rem; color: var(--gray-400); font-size: 1rem; pointer-events: none;
+        }
 
         .btn {
             display: inline-flex; align-items: center; justify-content: center; padding: 0.875rem 1.5rem;
@@ -143,7 +143,11 @@
         .primary-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
         .secondary-btn { background: white; color: var(--primary); border: 2px solid var(--primary); }
         .secondary-btn:hover { background: var(--primary); color: white; transform: translateY(-2px); box-shadow: var(--shadow); }
-        .filter-actions, .form-actions { display: flex; gap: 1rem; justify-content: flex-end; flex-wrap: wrap; }
+        .danger-btn { background: linear-gradient(135deg, var(--danger), #dc2626); color: white; }
+        .danger-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .export-btn { background: linear-gradient(135deg, #34d399, #059669); color: white; }
+        .export-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .filter-actions, .form-actions, .login-actions { display: flex; gap: 1rem; justify-content: flex-end; flex-wrap: wrap; }
 
         .table-controls { display: flex; align-items: center; gap: 1rem; }
         .group-option { display: flex; align-items: center; gap: 0.5rem; }
@@ -151,12 +155,27 @@
         .group-option label { font-size: 0.9rem; font-weight: 500; margin: 0; color: var(--gray-700); text-transform: none; letter-spacing: normal; }
 
         .table-responsive { overflow-x: auto; border-radius: var(--border-radius-sm); }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: white; min-width: 1200px; }
-        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: white; }
+        th, td { padding: 0.75rem 0.5rem; text-align: left; border-bottom: 1px solid var(--gray-200); }
         th {
             background: linear-gradient(135deg, var(--gray-100), var(--gray-200)); font-weight: 700; color: var(--gray-800);
             text-transform: uppercase; letter-spacing: 0.025em; font-size: 0.75rem; position: sticky; top: 0; z-index: 10;
         }
+        th:nth-child(1), td:nth-child(1) { width: 8%; }
+        th:nth-child(2), td:nth-child(2) { width: 8%; }
+        th:nth-child(3), td:nth-child(3) { width: 8%; }
+        th:nth-child(4), td:nth-child(4) { width: 10%; }
+        th:nth-child(5), td:nth-child(5) { width: 8%; }
+        th:nth-child(6), td:nth-child(6) { width: 6%; }
+        th:nth-child(7), td:nth-child(7) { width: 8%; }
+        th:nth-child(8), td:nth-child(8) { width: 6%; }
+        th:nth-child(9), td:nth-child(9) { width: 6%; }
+        th:nth-child(10), td:nth-child(10) { width: 6%; }
+        th:nth-child(11), td:nth-child(11) { width: 6%; }
+        th:nth-child(12), td:nth-child(12) { width: 8%; }
+        th:nth-child(13), td:nth-child(13) { width: 8%; }
+        th:nth-child(14), td:nth-child(14) { width: 6%; }
+        th:nth-child(15), td:nth-child(15) { width: 6%; }
         tbody tr { transition: all 0.2s ease; }
         tbody tr:hover { background: var(--gray-50); transform: scale(1.001); }
         tbody tr.completed { background: linear-gradient(135deg, #ecfdf5, #f0fdf4); }
@@ -165,10 +184,12 @@
         .relance-cell { font-size: 0.8rem; font-weight: 600; color: var(--gray-600); }
         .alert-cell { font-size: 0.8rem; font-weight: 600; color: var(--warning); }
 
-        .status-btn { padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.025em; }
+        .status-btn, .edit-btn, .delete-btn { padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.025em; }
         .status-pending { background: linear-gradient(135deg, var(--warning), #fbbf24); color: white; }
         .status-completed { background: linear-gradient(135deg, var(--success), #059669); color: white; }
-        .status-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+        .edit-btn { background: linear-gradient(135deg, var(--accent), var(--primary)); color: white; }
+        .delete-btn { background: linear-gradient(135deg, var(--danger), #dc2626); color: white; }
+        .status-btn:hover, .edit-btn:hover, .delete-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
 
         .icon-btn {
             width: 2.5rem; height: 2.5rem; padding: 0; border-radius: 50%;
@@ -177,228 +198,447 @@
         }
         .icon-btn:hover { background: rgba(255, 255, 255, 0.3); transform: scale(1.1); }
 
+        /* Styles pour l'écran de connexion */
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 90vh;
+            padding: 2rem;
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+        }
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-xl);
+            padding: 3rem;
+            width: 100%;
+            max-width: 450px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transform: translateY(20px);
+            animation: slideIn 0.5s ease forwards;
+        }
+        @keyframes slideIn { to { transform: translateY(0); } }
+        .login-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+        .login-logo {
+            max-width: 200px;
+            margin: 0 auto 2rem;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+        .login-logo:hover { transform: scale(1.05); }
+        .login-error {
+            color: var(--danger);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            display: none;
+        }
+
+        /* Styles pour le panneau de profil */
+        .profile-panel {
+            position: absolute; top: 70px; right: 2rem; width: 250px;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            border-radius: var(--border-radius); box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255, 255, 255, 0.2); padding: 1.5rem;
+            display: none; z-index: 100; transition: all 0.3s ease;
+        }
+        .profile-panel.active { display: block; }
+        .profile-info {
+            display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
+        }
+        .profile-info i { font-size: 2rem; color: var(--primary); }
+        .profile-info span { font-weight: 600; color: var(--gray-700); }
+        .profile-actions { display: flex; justify-content: flex-end; }
+        .logout-btn {
+            background: linear-gradient(135deg, var(--danger), #dc2626); color: white;
+            padding: 0.5rem 1rem; border-radius: var(--border-radius-sm); font-size: 0.9rem;
+            font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+        }
+        .logout-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+
+        /* Styles pour les notifications */
+        .notification {
+            position: fixed; top: 20px; right: 20px; padding: 1rem 1.5rem; border-radius: 8px;
+            color: white; font-weight: 600; z-index: 1000; transform: translateX(400px);
+            transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex; align-items: center; gap: 1rem; max-width: 400px;
+        }
+        .notification .close-btn {
+            cursor: pointer; font-size: 0.9rem; opacity: 0.7; transition: opacity 0.3s ease;
+        }
+        .notification .close-btn:hover { opacity: 1; }
+        .notification-history {
+            position: fixed; top: 80px; right: 2rem; width: 300px; max-height: 400px; overflow-y: auto;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            border-radius: var(--border-radius); box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255, 255, 255, 0.2); padding: 1rem; display: none; z-index: 100;
+        }
+        .notification-history.active { display: block; }
+        .notification-history-item {
+            padding: 0.5rem; border-bottom: 1px solid var(--gray-200); font-size: 0.85rem;
+            color: var(--gray-700); display: flex; align-items: center; gap: 0.5rem;
+        }
+        .notification-history-item:last-child { border-bottom: none; }
+
         @media (max-width: 768px) {
-            .app-layout { padding: 1rem; gap: 1rem; }
+            .app-main { padding: 1rem; grid-template-columns: 1fr; }
             .header-content { padding: 0 1rem; }
-            .app-sidebar {
-                position: fixed; top: 80px; left: 1rem; right: 1rem; width: auto;
-                transform: translateY(-100vh); z-index: 90; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            .app-sidebar.active { transform: translateY(0); }
-            .filter-grid, .form-grid { grid-template-columns: 1fr; gap: 1rem; }
-            .filter-actions, .form-actions { flex-direction: column; }
+            .nav-menu { flex-wrap: wrap; gap: 1rem; justify-content: flex-start; }
+            .profile-panel, .notification-history { right: 1rem; width: 90%; max-width: 300px; }
+            .filter-grid, .form-grid, .login-grid { grid-template-columns: 1fr; gap: 1rem; }
+            .filter-actions, .form-actions, .login-actions { flex-direction: column; }
             .btn { width: 100%; }
             .card-header { padding: 1rem; flex-direction: column; gap: 1rem; align-items: flex-start; }
             .table-responsive { font-size: 0.75rem; }
             th, td { padding: 0.5rem 0.25rem; }
+            th:nth-child(1), td:nth-child(1) { width: auto; min-width: 60px; }
+            th:nth-child(2), td:nth-child(2) { width: auto; min-width: 60px; }
+            th:nth-child(3), td:nth-child(3) { width: auto; min-width: 60px; }
+            th:nth-child(4), td:nth-child(4) { width: auto; min-width: 80px; }
+            th:nth-child(5), td:nth-child(5) { width: auto; min-width: 60px; }
+            th:nth-child(6), td:nth-child(6) { width: auto; min-width: 50px; }
+            th:nth-child(7), td:nth-child(7) { width: auto; min-width: 60px; }
+            th:nth-child(8), td:nth-child(8) { width: auto; min-width: 50px; }
+            th:nth-child(9), td:nth-child(9) { width: auto; min-width: 50px; }
+            th:nth-child(10), td:nth-child(10) { width: auto; min-width: 50px; }
+            th:nth-child(11), td:nth-child(11) { width: auto; min-width: 50px; }
+            th:nth-child(12), td:nth-child(12) { width: auto; min-width: 60px; }
+            th:nth-child(13), td:nth-child(13) { width: auto; min-width: 60px; }
+            th:nth-child(14), td:nth-child(14) { width: auto; min-width: 50px; }
+            th:nth-child(15), td:nth-child(15) { width: auto; min-width: 50px; }
+            .login-card { padding: 2rem; max-width: 350px; }
+            .login-logo { max-width: 150px; }
         }
 
         @media (max-width: 480px) {
             .header-content h1 { font-size: 1.25rem; }
             .header-content h1 i { font-size: 1.5rem; }
-            .app-layout { padding: 0.5rem; }
+            .app-main { padding: 0.5rem; }
+            .nav-item { padding: 0.5rem 1rem; }
+            .login-card { padding: 1.5rem; }
         }
     </style>
 </head>
 <body>
-    <div class="app-container">
+    <div id="login-container" class="login-container">
+        <section class="login-card">
+            <img src="logo_ace.png" alt="Logo de l'entreprise" class="login-logo">
+            <div class="card-header">
+                <h2><i class="fas fa-sign-in-alt"></i> Connexion</h2>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="login-error" id="loginError"></div>
+                <div class="login-grid">
+                    <div class="login-group">
+                        <label for="login_id">Identifiant</label>
+                        <i class="fas fa-user input-icon"></i>
+                        <input type="text" id="login_id" name="id" required placeholder="Identifiant">
+                    </div>
+                    <div class="login-group">
+                        <label for="login_password">Mot de passe</label>
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" id="login_password" name="password" required placeholder="Mot de passe">
+                    </div>
+                </div>
+                <div class="login-actions">
+                    <button type="submit" class="btn primary-btn"><i class="fas fa-sign-in-alt"></i> Se connecter</button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <div id="app-container" class="app-container" style="display: none;">
         <header class="app-header">
             <div class="header-content">
                 <h1><i class="fas fa-file-invoice"></i> Gestion des BL</h1>
-                <button id="toggleMenu" class="icon-btn"><i class="fas fa-bars"></i></button>
+                <div style="display: flex; gap: 1rem;">
+                    <button id="toggleNotifications" class="icon-btn"><i class="fas fa-bell"></i></button>
+                    <button id="toggleProfile" class="icon-btn"><i class="fas fa-user"></i></button>
+                </div>
             </div>
+            <nav class="nav-menu">
+                <span class="nav-item active" data-view="dashboard"><i class="fas fa-chart-line"></i> Tableau de bord</span>
+                <span class="nav-item" data-view="new-bl"><i class="fas fa-plus-circle"></i> Nouveau BL</span>
+            </nav>
+            <div id="profile-panel" class="profile-panel">
+                <div class="profile-info">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="user-id">Utilisateur</span>
+                </div>
+                <div class="profile-actions">
+                    <button id="logout-btn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
+                </div>
+            </div>
+            <div id="notification-history" class="notification-history"></div>
         </header>
 
-        <div class="app-layout">
-            <aside class="app-sidebar">
-                <div class="sidebar-title">Navigation</div>
-                <nav>
-                    <ul style="list-style: none;">
-                        <li class="nav-item active" data-view="dashboard"><i class="fas fa-chart-line"></i> Tableau de bord</li>
-                        <li class="nav-item" data-view="new-bl"><i class="fas fa-plus-circle"></i> Nouveau BL</li>
-                    </ul>
-                </nav>
-            </aside>
-
-            <main class="app-main">
-                <div id="dashboard-view" class="view-content" style="display: block;">
-                    <section class="search-card">
-                        <div class="card-header">
-                            <h2><i class="fas fa-search"></i> Recherche Avancée</h2>
-                        </div>
-                        <form id="searchForm" class="filter-form">
-                            <div class="filter-grid">
-                                <div class="filter-group">
-                                    <label for="search_banque">Banque</label>
-                                    <select id="search_banque" name="banque">
-                                        <option value="">Toutes les banques</option>
-                                        <option value="BNI">BNI</option>
-                                        <option value="Ecobank">Ecobank</option>
-                                        <option value="UBA">UBA</option>
-                                        <option value="SGCI">SGCI</option>
-                                    </select>
-                                </div>
-                                <div class="filter-group">
-                                    <label for="search_client">Client</label>
-                                    <select id="search_client" name="client">
-                                        <option value="">Tous les clients</option>
-                                        <option value="Client 1">Client 1</option>
-                                        <option value="Client 2">Client 2</option>
-                                        <option value="Client 3">Client 3</option>
-                                    </select>
-                                </div>
-                                <div class="filter-group">
-                                    <label for="search_transitaire">Transitaire</label>
-                                    <select id="search_transitaire" name="transitaire">
-                                        <option value="">Tous les transitaires</option>
-                                        <option value="Moussa">Moussa</option>
-                                        <option value="Transitaire 2">Transitaire 2</option>
-                                        <option value="Transitaire 3">Transitaire 3</option>
-                                    </select>
-                                </div>
+        <main class="app-main">
+            <div id="dashboard-view" class="view-content" style="display: block;">
+                <section class="search-card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-search"></i> Recherche Avancée</h2>
+                    </div>
+                    <form id="searchForm" class="filter-form">
+                        <div class="filter-grid">
+                            <div class="filter-group">
+                                <label for="search_banque">Banque</label>
+                                <select id="search_banque" name="banque">
+                                    <option value="">Toutes les banques</option>
+                                    <option value="BNI">BNI</option>
+                                    <option value="Ecobank">Ecobank</option>
+                                    <option value="UBA">UBA</option>
+                                    <option value="SGCI">SGCI</option>
+                                </select>
                             </div>
-                            <div class="filter-actions">
-                                <button type="submit" class="btn primary-btn"><i class="fas fa-search"></i> Rechercher</button>
-                                <button type="reset" class="btn secondary-btn"><i class="fas fa-undo"></i> Réinitialiser</button>
+                            <div class="filter-group">
+                                <label for="search_client">Client</label>
+                                <select id="search_client" name="client">
+                                    <option value="">Tous les clients</option>
+                                    <option value="Client 1">Client 1</option>
+                                    <option value="Client 2">Client 2</option>
+                                    <option value="Client 3">Client 3</option>
+                                </select>
                             </div>
-                        </form>
-                    </section>
-
-                    <section class="table-card">
-                        <div class="card-header">
-                            <h2><i class="fas fa-list"></i> Liste des BL</h2>
-                            <div class="table-controls">
-                                <div class="group-option">
-                                    <input type="checkbox" id="groupSimilar" checked>
-                                    <label for="groupSimilar">Regrouper les similaires</label>
-                                </div>
+                            <div class="filter-group">
+                                <label for="search_transitaire">Transitaire</label>
+                                <select id="search_transitaire" name="transitaire">
+                                    <option value="">Tous les transitaires</option>
+                                    <option value="Moussa">Moussa</option>
+                                    <option value="Transitaire 2">Transitaire 2</option>
+                                    <option value="Transitaire 3">Transitaire 3</option>
+                                </select>
                             </div>
                         </div>
-
-                        <div class="table-responsive">
-                            <table id="blTable">
-                                <thead>
-                                    <tr>
-                                        <th><i class="fas fa-university"></i> Banque</th>
-                                        <th><i class="fas fa-user"></i> Client</th>
-                                        <th><i class="fas fa-truck"></i> Transitaire</th>
-                                        <th><i class="fas fa-box"></i> Produit</th>
-                                        <th><i class="fas fa-hashtag"></i> N°DAS</th>
-                                        <th><i class="fas fa-weight"></i> Poids</th>
-                                        <th><i class="fas fa-calendar"></i> Date Empotage</th>
-                                        <th><i class="fas fa-bell"></i> R1</th>
-                                        <th><i class="fas fa-bell"></i> R2</th>
-                                        <th><i class="fas fa-bell"></i> R3</th>
-                                        <th><i class="fas fa-bell"></i> R4</th>
-                                        <th><i class="fas fa-exclamation-triangle"></i> Alerte Banque</th>
-                                        <th><i class="fas fa-tasks"></i> Statut</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Rempli dynamiquement -->
-                                </tbody>
-                            </table>
+                        <div class="filter-actions">
+                            <button type="submit" class="btn primary-btn"><i class="fas fa-search"></i> Rechercher</button>
+                            <button type="reset" class="btn secondary-btn"><i class="fas fa-undo"></i> Réinitialiser</button>
                         </div>
-                    </section>
-                </div>
+                    </form>
+                </section>
 
-                <div id="new-bl-view" class="view-content">
-                    <section class="form-card">
-                        <div class="card-header">
-                            <h2><i class="fas fa-plus-circle"></i> Créer un nouveau BL</h2>
+                <section class="table-card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-list"></i> Liste des BL</h2>
+                        <div class="table-controls">
+                            <div class="group-option">
+                                <input type="checkbox" id="groupSimilar" checked>
+                                <label for="groupSimilar">Regrouper les similaires</label>
+                            </div>
+                            <button id="exportExcel" class="btn export-btn"><i class="fas fa-file-excel"></i> Exporter en Excel</button>
+                            <button id="exportPDF" class="btn export-btn"><i class="fas fa-file-pdf"></i> Exporter en PDF</button>
                         </div>
-                        <form id="blForm" class="bl-form">
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="banque">Banque déposante</label>
-                                    <select id="banque" name="banque" required>
-                                        <option value="">Sélectionnez une banque</option>
-                                        <option value="BNI">BNI</option>
-                                        <option value="Ecobank">Ecobank</option>
-                                        <option value="UBA">UBA</option>
-                                        <option value="SGCI">SGCI</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="client">Client</label>
-                                    <select id="client" name="client" required>
-                                        <option value="">Sélectionnez un client</option>
-                                        <option value="Client 1">Client 1</option>
-                                        <option value="Client 2">Client 2</option>
-                                        <option value="Client 3">Client 3</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="transitaire">Transitaire</label>
-                                    <select id="transitaire" name="transitaire" required>
-                                        <option value="">Sélectionnez un transitaire</option>
-                                        <option value="Moussa">Moussa</option>
-                                        <option value="Transitaire 2">Transitaire 2</option>
-                                        <option value="Transitaire 3">Transitaire 3</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label for="produit">Produit</label>
-                                    <input type="text" id="produit" name="produit" required placeholder="Nom du produit">
-                                </div>
-                                <div class="form-group">
-                                    <label for="numero_das">N° DAS</label>
-                                    <input type="text" id="numero_das" name="numero_das" required placeholder="Numéro DAS">
-                                </div>
-                                <div class="form-group">
-                                    <label for="poids">Poids (kg)</label>
-                                    <input type="number" id="poids" name="poids" step="0.01" min="0" required placeholder="0.00">
-                                </div>
-                                <div class="form-group">
-                                    <label for="date_accord_banque">Date accord banque</label>
-                                    <input type="date" id="date_accord_banque" name="date_accord_banque">
-                                </div>
-                                <div class="form-group">
-                                    <label for="date_empotage">Date empotage</label>
-                                    <input type="date" id="date_empotage" name="date_empotage">
-                                </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table id="blTable">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-university"></i> Banque</th>
+                                    <th><i class="fas fa-user"></i> Client</th>
+                                    <th><i class="fas fa-truck"></i> Transitaire</th>
+                                    <th><i class="fas fa-box"></i> Produit</th>
+                                    <th><i class="fas fa-hashtag"></i> N°DAS</th>
+                                    <th><i class="fas fa-weight"></i> Poids</th>
+                                    <th><i class="fas fa-calendar"></i> Date Empotage</th>
+                                    <th><i class="fas fa-bell"></i> R1</th>
+                                    <th><i class="fas fa-bell"></i> R2</th>
+                                    <th><i class="fas fa-bell"></i> R3</th>
+                                    <th><i class="fas fa-bell"></i> R4</th>
+                                    <th><i class="fas fa-exclamation-triangle"></i> Alerte Banque</th>
+                                    <th><i class="fas fa-tasks"></i> Statut</th>
+                                    <th><i class="fas fa-edit"></i> Action</th>
+                                    <th><i class="fas fa-trash"></i> Supprimer</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Rempli dynamiquement -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <div id="new-bl-view" class="view-content">
+                <section class="form-card">
+                    <div class="card-header">
+                        <h2 id="form-title"><i class="fas fa-plus-circle"></i> Créer un nouveau BL</h2>
+                    </div>
+                    <form id="blForm" class="bl-form">
+                        <input type="hidden" id="bl_id" name="id">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="banque">Banque déposante</label>
+                                <select id="banque" name="banque" required>
+                                    <option value="">Sélectionnez une banque</option>
+                                    <option value="BNI">BNI</option>
+                                    <option value="Ecobank">Ecobank</option>
+                                    <option value="UBA">UBA</option>
+                                    <option value="SGCI">SGCI</option>
+                                </select>
                             </div>
-                            <div class="form-actions">
-                                <button type="submit" class="btn primary-btn"><i class="fas fa-save"></i> Enregistrer</button>
-                                <button type="reset" class="btn secondary-btn"><i class="fas fa-times"></i> Annuler</button>
+                            <div class="form-group">
+                                <label for="client">Client</label>
+                                <select id="client" name="client" required>
+                                    <option value="">Sélectionnez un client</option>
+                                    <option value="Client 1">Client 1</option>
+                                    <option value="Client 2">Client 2</option>
+                                    <option value="Client 3">Client 3</option>
+                                </select>
                             </div>
-                        </form>
-                    </section>
-                </div>
-            </main>
-        </div>
+                            <div class="form-group">
+                                <label for="transitaire">Transitaire</label>
+                                <select id="transitaire" name="transitaire" required>
+                                    <option value="">Sélectionnez un transitaire</option>
+                                    <option value="Moussa">Moussa</option>
+                                    <option value="Transitaire 2">Transitaire 2</option>
+                                    <option value="Transitaire 3">Transitaire 3</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="produit">Produit</label>
+                                <input type="text" id="produit" name="produit" required placeholder="Nom du produit">
+                            </div>
+                            <div class="form-group">
+                                <label for="numero_das">N° DAS</label>
+                                <input type="text" id="numero_das" name="numero_das" required placeholder="Numéro DAS">
+                            </div>
+                            <div class="form-group">
+                                <label for="poids">Poids (kg)</label>
+                                <input type="number" id="poids" name="poids" step="0.01" min="0" required placeholder="0.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="date_accord_banque">Date accord banque</label>
+                                <input type="date" id="date_accord_banque" name="date_accord_banque">
+                            </div>
+                            <div class="form-group">
+                                <label for="date_empotage">Date empotage</label>
+                                <input type="date" id="date_empotage" name="date_empotage">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn primary-btn"><i class="fas fa-save"></i> Enregistrer</button>
+                            <button type="reset" class="btn secondary-btn"><i class="fas fa-times"></i> Annuler</button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </main>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const API_URL = 'bl_api.php'; // même dossier
+            const API_URL = 'bl_api.php';
+            const LOGIN_API_URL = 'login_api.php';
+            const { jsPDF } = window.jspdf;
 
             // Éléments DOM
+            const loginContainer = document.getElementById('login-container');
+            const appContainer = document.getElementById('app-container');
+            const loginForm = document.getElementById('loginForm');
+            const loginError = document.getElementById('loginError');
             const blForm = document.getElementById('blForm');
+            const formTitle = document.getElementById('form-title');
+            const blIdInput = document.getElementById('bl_id');
             const searchForm = document.getElementById('searchForm');
             const tableBody = document.querySelector('#blTable tbody');
             const groupSimilarCheckbox = document.getElementById('groupSimilar');
-            const toggleMenuBtn = document.getElementById('toggleMenu');
-            const sidebar = document.querySelector('.app-sidebar');
+            const exportExcelBtn = document.getElementById('exportExcel');
+            const exportPDFBtn = document.getElementById('exportPDF');
+            const toggleProfileBtn = document.getElementById('toggleProfile');
+            const toggleNotificationsBtn = document.getElementById('toggleNotifications');
+            const profilePanel = document.getElementById('profile-panel');
+            const userIdSpan = document.getElementById('user-id');
+            const logoutBtn = document.getElementById('logout-btn');
+            const notificationHistory = document.getElementById('notification-history');
             const navItems = document.querySelectorAll('.nav-item');
             const views = {
                 dashboard: document.getElementById('dashboard-view'),
                 'new-bl': document.getElementById('new-bl-view')
             };
 
-            // Données en mémoire (chargées depuis l'API)
+            // Données en mémoire
             let bls = [];
+            let notificationHistoryItems = [];
+            let editMode = false;
+            let currentUserId = sessionStorage.getItem('userId') || 'Utilisateur';
+
+            // Vérifier l'état de connexion
+            if (sessionStorage.getItem('isLoggedIn') === 'true') {
+                loginContainer.style.display = 'none';
+                appContainer.style.display = 'flex';
+                userIdSpan.textContent = currentUserId;
+                loadBLs();
+            }
+
+            // Gestion de la connexion
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                loginError.style.display = 'none';
+                const formData = new FormData(loginForm);
+                const loginData = {
+                    id: formData.get('id'),
+                    password: formData.get('password')
+                };
+
+                try {
+                    const res = await fetch(LOGIN_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(loginData)
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        sessionStorage.setItem('isLoggedIn', 'true');
+                        sessionStorage.setItem('userId', loginData.id);
+                        userIdSpan.textContent = loginData.id;
+                        loginContainer.style.display = 'none';
+                        appContainer.style.display = 'flex';
+                        showNotification('Connexion réussie', 'success', 5000);
+                        loadBLs();
+                    } else {
+                        loginError.textContent = data.error || 'Identifiant ou mot de passe incorrect';
+                        loginError.style.display = 'block';
+                    }
+                } catch (e) {
+                    loginError.textContent = 'Erreur de connexion au serveur';
+                    loginError.style.display = 'block';
+                    console.error(e);
+                }
+            });
+
+            // Gestion du profil et déconnexion
+            toggleProfileBtn.addEventListener('click', () => {
+                profilePanel.classList.toggle('active');
+                notificationHistory.classList.remove('active');
+            });
+            logoutBtn.addEventListener('click', () => {
+                sessionStorage.removeItem('isLoggedIn');
+                sessionStorage.removeItem('userId');
+                loginContainer.style.display = 'flex';
+                appContainer.style.display = 'none';
+                profilePanel.classList.remove('active');
+                showNotification('Déconnexion réussie', 'info');
+            });
+            toggleNotificationsBtn.addEventListener('click', () => {
+                notificationHistory.classList.toggle('active');
+                profilePanel.classList.remove('active');
+            });
 
             // Initialisation
             initNavigation();
-            loadBLs();
 
             // Événements
             blForm.addEventListener('submit', handleFormSubmit);
             searchForm.addEventListener('submit', (e) => { e.preventDefault(); updateTable(); });
             searchForm.addEventListener('reset', () => setTimeout(updateTable, 50));
             groupSimilarCheckbox.addEventListener('change', updateTable);
-            toggleMenuBtn.addEventListener('click', () => sidebar.classList.toggle('active'));
+            exportExcelBtn.addEventListener('click', exportToExcel);
+            exportPDFBtn.addEventListener('click', exportToPDF);
 
             function initNavigation() {
                 navItems.forEach(item => {
@@ -407,7 +647,7 @@
                         showView(view);
                         navItems.forEach(nav => nav.classList.remove('active'));
                         this.classList.add('active');
-                        if (window.innerWidth < 768) sidebar.classList.remove('active');
+                        if (view !== 'new-bl') resetForm();
                     });
                 });
             }
@@ -470,23 +710,65 @@
                 if (blData.date_empotage) {
                     Object.assign(blData, calculateRelances(blData.date_empotage));
                 }
-                blData.statut = 'pending';
+                blData.statut = blData.statut || 'pending';
 
                 try {
+                    const method = editMode ? 'PUT' : 'POST';
                     const res = await fetch(API_URL, {
-                        method: 'POST',
+                        method,
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(blData)
                     });
                     const data = await res.json();
-                    showNotification(data.message || 'BL créé', 'success');
-                    blForm.reset();
+                    showNotification(data.message || (editMode ? 'BL mis à jour' : 'BL créé'), 'success', 5000);
+                    resetForm();
                     document.querySelector('.nav-item[data-view="dashboard"]').click();
                     await loadBLs();
                 } catch (e) {
                     showNotification("Erreur lors de l'enregistrement", "error");
                     console.error(e);
                 }
+            }
+
+            async function deleteBL(id) {
+                if (!confirm('Voulez-vous vraiment supprimer ce BL ?')) return;
+                try {
+                    const res = await fetch(API_URL, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id })
+                    });
+                    const data = await res.json();
+                    showNotification(data.message || 'BL supprimé', 'success', 5000);
+                    await loadBLs();
+                } catch (e) {
+                    showNotification("Erreur lors de la suppression", "error");
+                    console.error(e);
+                }
+            }
+
+            function resetForm() {
+                editMode = false;
+                blForm.reset();
+                blIdInput.value = '';
+                formTitle.innerHTML = '<i class="fas fa-plus-circle"></i> Créer un nouveau BL';
+                blForm.querySelector('.primary-btn').innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+            }
+
+            function editBL(bl) {
+                editMode = true;
+                blIdInput.value = bl.id;
+                document.getElementById('banque').value = bl.banque;
+                document.getElementById('client').value = bl.client;
+                document.getElementById('transitaire').value = bl.transitaire;
+                document.getElementById('produit').value = bl.produit;
+                document.getElementById('numero_das').value = bl.numero_das;
+                document.getElementById('poids').value = bl.poids;
+                document.getElementById('date_accord_banque').value = bl.date_accord_banque || '';
+                document.getElementById('date_empotage').value = bl.date_empotage || '';
+                formTitle.innerHTML = '<i class="fas fa-edit"></i> Modifier le BL';
+                blForm.querySelector('.primary-btn').innerHTML = '<i class="fas fa-save"></i> Mettre à jour';
+                document.querySelector('.nav-item[data-view="new-bl"]').click();
             }
 
             function filterBLs(items, filters) {
@@ -531,7 +813,7 @@
                 tableBody.innerHTML = '';
                 if (!items.length) {
                     const row = document.createElement('tr');
-                    row.innerHTML = `<td colspan="13" style="text-align:center; padding:3rem; color: var(--gray-500); font-style: italic;">
+                    row.innerHTML = `<td colspan="15" style="text-align:center; padding:3rem; color: var(--gray-500); font-style: italic;">
                         <i class="fas fa-inbox" style="font-size:2rem; margin-bottom:1rem; display:block;"></i>Aucun BL trouvé
                     </td>`;
                     tableBody.appendChild(row);
@@ -549,7 +831,7 @@
                             <td><strong>Total (${item.count} BL)</strong></td>
                             <td><strong>${item.count}</strong></td>
                             <td><strong>${item.totalPoids} kg</strong></td>
-                            <td></td><td></td><td></td><td></td><td></td><td></td><td></td>`;
+                            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>`;
                     } else {
                         if (item.statut === 'completed') tr.classList.add('completed');
                         tr.innerHTML = `
@@ -570,25 +852,31 @@
                                     <i class="fas ${item.statut === 'completed' ? 'fa-check-circle' : 'fa-clock'}"></i>
                                     ${item.statut === 'completed' ? 'Terminé' : 'En cours'}
                                 </button>
+                            </td>
+                            <td>
+                                <button class="edit-btn" data-id="${item.id}"><i class="fas fa-edit"></i> Modifier</button>
+                            </td>
+                            <td>
+                                <button class="delete-btn" data-id="${item.id}"><i class="fas fa-trash"></i> Supprimer</button>
                             </td>`;
                     }
                     tableBody.appendChild(tr);
                 });
 
-                // binder actions
+                // Binder actions
                 document.querySelectorAll('.status-btn').forEach(btn => {
                     btn.addEventListener('click', async function() {
                         const id = this.getAttribute('data-id');
                         const current = this.getAttribute('data-status');
                         const next = current === 'completed' ? 'pending' : 'completed';
                         try {
-                            const res = await fetch(`${API_URL}`, {
+                            const res = await fetch(API_URL, {
                                 method: 'PUT',
-                                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                                body: new URLSearchParams({ id, statut: next }).toString()
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id, statut: next })
                             });
                             const data = await res.json();
-                            showNotification(data.message || 'Statut mis à jour', 'success');
+                            showNotification(data.message || 'Statut mis à jour', 'success', 5000);
                             await loadBLs();
                         } catch (e) {
                             showNotification("Erreur de mise à jour du statut", "error");
@@ -596,33 +884,164 @@
                         }
                     });
                 });
+
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        const bl = bls.find(b => b.id == id);
+                        if (bl) editBL(bl);
+                    });
+                });
+
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id');
+                        deleteBL(id);
+                    });
+                });
             }
 
-            function showNotification(message, type = 'info') {
+            function exportToExcel() {
+                const filters = Object.fromEntries(new FormData(searchForm).entries());
+                const shouldGroup = groupSimilarCheckbox.checked;
+                let data = filterBLs(bls, filters);
+                if (shouldGroup) data = groupSimilarBLs(data);
+
+                const exportData = data.map(item => {
+                    if (item.isSummary) {
+                        return {
+                            Banque: '',
+                            Client: '',
+                            Transitaire: '',
+                            Produit: `Total (${item.count} BL)`,
+                            'N°DAS': item.count,
+                            Poids: `${item.totalPoids} kg`,
+                            'Date Empotage': '',
+                            R1: '',
+                            R2: '',
+                            R3: '',
+                            R4: '',
+                            'Alerte Banque': '',
+                            Statut: ''
+                        };
+                    }
+                    return {
+                        Banque: item.banque,
+                        Client: item.client,
+                        Transitaire: item.transitaire,
+                        Produit: item.produit,
+                        'N°DAS': item.numero_das,
+                        Poids: `${item.poids} kg`,
+                        'Date Empotage': formatDisplay(item.date_empotage),
+                        R1: formatDisplay(item.relance_r1),
+                        R2: formatDisplay(item.relance_r2),
+                        R3: formatDisplay(item.relance_r3),
+                        R4: formatDisplay(item.relance_r4),
+                        'Alerte Banque': formatDisplay(item.date_alerte_banque),
+                        Statut: item.statut === 'completed' ? 'Terminé' : 'En cours'
+                    };
+                });
+
+                const ws = XLSX.utils.json_to_sheet(exportData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'BLs');
+                XLSX.writeFile(wb, 'Liste_des_BLs.xlsx');
+                showNotification('Exportation Excel réussie', 'success', 5000);
+            }
+
+            function exportToPDF() {
+                const { doc } = new jsPDF();
+                const filters = Object.fromEntries(new FormData(searchForm).entries());
+                const shouldGroup = groupSimilarCheckbox.checked;
+                let data = filterBLs(bls, filters);
+                if (shouldGroup) data = groupSimilarBLs(data);
+
+                doc.setFontSize(16);
+                doc.text('Liste des BL', 20, 20);
+                doc.setFontSize(10);
+                doc.text(`Exporté le ${new Date().toLocaleDateString('fr-FR')}`, 20, 30);
+
+                const columns = ['Banque', 'Client', 'Transitaire', 'Produit', 'N°DAS', 'Poids', 'Date Empotage', 'R1', 'R2', 'R3', 'R4', 'Alerte Banque', 'Statut'];
+                const rows = data.map(item => {
+                    if (item.isSummary) {
+                        return ['', '', '', `Total (${item.count} BL)`, item.count, `${item.totalPoids} kg`, '', '', '', '', '', '', ''];
+                    }
+                    return [
+                        item.banque,
+                        item.client,
+                        item.transitaire,
+                        item.produit,
+                        item.numero_das,
+                        `${item.poids} kg`,
+                        formatDisplay(item.date_empotage),
+                        formatDisplay(item.relance_r1),
+                        formatDisplay(item.relance_r2),
+                        formatDisplay(item.relance_r3),
+                        formatDisplay(item.relance_r4),
+                        formatDisplay(item.date_alerte_banque),
+                        item.statut === 'completed' ? 'Terminé' : 'En cours'
+                    ];
+                });
+
+                doc.autoTable({
+                    head: [columns],
+                    body: rows,
+                    startY: 40,
+                    theme: 'grid',
+                    styles: { fontSize: 8, cellPadding: 2 },
+                    columnStyles: { 0: { cellWidth: 20 }, 1: { cellWidth: 20 }, 2: { cellWidth: 20 }, 3: { cellWidth: 25 }, 4: { cellWidth: 15 }, 5: { cellWidth: 15 }, 6: { cellWidth: 20 }, 7: { cellWidth: 15 }, 8: { cellWidth: 15 }, 9: { cellWidth: 15 }, 10: { cellWidth: 15 }, 11: { cellWidth: 20 }, 12: { cellWidth: 15 } }
+                });
+
+                doc.save('Liste_des_BLs.pdf');
+                showNotification('Exportation PDF réussie', 'success', 5000);
+            }
+
+            function showNotification(message, type = 'info', duration = 3000) {
                 const notification = document.createElement('div');
-                notification.style.cssText = `
-                    position: fixed; top: 20px; right: 20px; padding: 1rem 1.5rem; border-radius: 8px; color: white; font-weight: 600;
-                    z-index: 1000; transform: translateX(400px); transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                `;
+                notification.className = 'notification';
                 notification.style.background = type === 'success'
                     ? 'linear-gradient(135deg, var(--success), #059669)'
-                    : (type === 'error' ? 'linear-gradient(135deg, var(--danger), #dc2626)' : 'linear-gradient(135deg, var(--primary), var(--secondary))');
-                notification.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : (type==='error'?'times':'info')}-circle"></i> ${message}`;
+                    : type === 'error'
+                        ? 'linear-gradient(135deg, var(--danger), #dc2626)'
+                        : type === 'warning'
+                            ? 'linear-gradient(135deg, var(--warning), #d97706)'
+                            : 'linear-gradient(135deg, var(--primary), var(--secondary))';
+                notification.innerHTML = `
+                    <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : type === 'warning' ? 'exclamation-triangle' : 'info'}-circle"></i>
+                    ${message}
+                    <span class="close-btn"><i class="fas fa-times"></i></span>`;
                 document.body.appendChild(notification);
                 setTimeout(() => { notification.style.transform = 'translateX(0)'; }, 100);
-                setTimeout(() => {
+                if (duration > 0) {
+                    setTimeout(() => {
+                        notification.style.transform = 'translateX(400px)';
+                        setTimeout(() => notification.remove(), 300);
+                    }, duration);
+                }
+                notification.querySelector('.close-btn').addEventListener('click', () => {
                     notification.style.transform = 'translateX(400px)';
                     setTimeout(() => notification.remove(), 300);
-                }, 3000);
+                });
+
+                // Ajouter à l'historique
+                const historyItem = document.createElement('div');
+                historyItem.className = 'notification-history-item';
+                historyItem.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : type === 'warning' ? 'exclamation-triangle' : 'info'}-circle"></i> ${message}`;
+                notificationHistory.prepend(historyItem);
+                notificationHistoryItems.push(historyItem);
+                if (notificationHistoryItems.length > 10) {
+                    const oldest = notificationHistoryItems.shift();
+                    oldest.remove();
+                }
             }
 
             // Raccourcis clavier
             document.addEventListener('keydown', function(e) {
                 if ((e.ctrlKey || e.metaKey) && e.key === 'n') { e.preventDefault(); document.querySelector('.nav-item[data-view="new-bl"]').click(); }
-                if (e.key === 'Escape' && sidebar.classList.contains('active')) sidebar.classList.remove('active');
-            });
-            window.addEventListener('resize', function() {
-                if (window.innerWidth > 768 && sidebar.classList.contains('active')) sidebar.classList.remove('active');
+                if (e.key === 'Escape') {
+                    profilePanel.classList.remove('active');
+                    notificationHistory.classList.remove('active');
+                }
             });
             setTimeout(() => { document.body.style.opacity = '1'; }, 100);
         });
