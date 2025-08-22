@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion des BL</title>
+    <title>Gestion des BL - ACE Empotage</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -11,28 +11,21 @@
     <style>
         /* Reset et variables */
         :root {
-            --primary: #3b82f6;
-            --primary-dark: #1e40af;
-            --secondary: #1e40af;
-            --accent: #60a5fa;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --light: #ffffff;
-            --dark: #1f2937;
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-300: #d1d5db;
-            --gray-400: #9ca3af;
-            --gray-500: #6b7280;
-            --gray-600: #4b5563;
-            --gray-700: #374151;
-            --gray-800: #1f2937;
-            --gray-900: #111827;
+            --primary-blue: #1e40af; /* Bleu profond */
+            --light-blue: #3b82f6; /* Bleu clair */
+            --sky-blue: #93c5fd; /* Bleu ciel */
+            --white: #ffffff; /* Blanc */
+            --light-gray: #f8fafc; /* Gris très clair */
+            --medium-gray: #e2e8f0; /* Gris moyen */
+            --dark-gray: #94a3b8; /* Gris foncé */
+            --light-green: #34d399; /* Vert clair */
+            --soft-green: #a7f3d0; /* Vert pastel */
+            --red: #ef4444; /* Rouge */
+            --orange: #f97316; /* Orange */
+            --purple: #8b5cf6; /* Violet */
             --border-radius: 12px;
             --border-radius-sm: 8px;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
             --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
@@ -43,8 +36,8 @@
         body {
             font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
             line-height: 1.6;
-            color: var(--gray-800);
-            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            color: #334155;
+            background: linear-gradient(135deg, var(--light-gray) 0%, var(--white) 100%);
             min-height: 100vh;
             opacity: 0;
             transition: opacity 0.5s ease;
@@ -52,60 +45,70 @@
 
         .app-container { display: flex; flex-direction: column; min-height: 100vh; }
 
+        /* Header redesign */
         .app-header {
-            background: rgba(59, 130, 246, 0.05);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            position: sticky; top: 0; z-index: 100; padding: 1rem 0;
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--light-blue) 100%);
+            position: sticky; top: 0; z-index: 100; 
+            box-shadow: var(--shadow-lg);
         }
 
         .header-content {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 0 2rem; max-width: 1600px; margin: 0 auto; width: 100%;
+            padding: 1rem 2rem; max-width: 1600px; margin: 0 auto; width: 100%;
+        }
+
+        .header-logo-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
         }
 
         .header-logo {
-            max-width: 150px; height: auto; transition: transform 0.3s ease;
+            max-width: 200px; height: auto; transition: transform 0.3s ease;
+            filter: brightness(0) invert(1);
         }
         .header-logo:hover { transform: scale(1.05); }
 
         .header-title {
-            flex-grow: 1; text-align: center;
+            color: var(--white);
         }
         .header-title h1 {
-            font-size: 1.75rem; font-weight: 700; color: var(--light); display: flex; align-items: center; justify-content: center; gap: 0.75rem; text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         .header-title h1 i {
-            background: linear-gradient(45deg, #60a5fa, #3b82f6);
-            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; font-size: 2rem;
+            color: var(--sky-blue); font-size: 1.8rem;
         }
 
         .header-right {
             display: flex; align-items: center; gap: 1rem;
         }
         .datetime {
-            color: var(--light); font-size: 0.9rem; font-weight: 500; padding: 0.5rem 1rem;
-            background: rgba(59, 130, 246, 0.2); border-radius: var(--border-radius-sm);
-            border: 1px solid rgba(255, 255, 255, 0.3); text-align: right;
+            color: var(--white); font-size: 0.9rem; font-weight: 500; padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.15); border-radius: var(--border-radius-sm);
+            border: 1px solid rgba(255, 255, 255, 0.2); text-align: right;
+            backdrop-filter: blur(10px);
         }
 
+        /* Navigation redesign */
         .nav-menu {
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding: 0.5rem 2rem;
-            display: flex; justify-content: center; gap: 2rem; max-width: 1600px; margin: 0 auto;
+            background: var(--white); padding: 0.5rem 2rem;
+            display: flex; justify-content: center; gap: 1rem; max-width: 1600px; margin: 0 auto;
+            border-bottom: 1px solid var(--medium-gray);
         }
         .nav-item {
             display: inline-flex; align-items: center; padding: 0.75rem 1.5rem; border-radius: var(--border-radius-sm);
             cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); font-weight: 500;
-            color: var(--gray-700); text-transform: uppercase; letter-spacing: 0.05em; position: relative; overflow: hidden;
+            color: var(--primary-blue); text-transform: uppercase; letter-spacing: 0.05em; position: relative; overflow: hidden;
         }
         .nav-item::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); transition: left 0.5s; }
+            background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent); transition: left 0.5s; }
         .nav-item:hover::before { left: 100%; }
-        .nav-item:hover { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; transform: translateY(-2px); box-shadow: var(--shadow); }
-        .nav-item.active { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; box-shadow: var(--shadow); }
+        .nav-item:hover { background: var(--light-gray); color: var(--primary-blue); transform: translateY(-2px); }
+        .nav-item.active { background: var(--light-blue); color: var(--white); box-shadow: var(--shadow); }
         .nav-item i { margin-right: 0.5rem; font-size: 1.1rem; }
 
+        /* Main content redesign */
         .app-main {
             flex: 1; max-width: 1600px; margin: 0 auto; width: 100%; padding: 2rem;
             display: grid; grid-template-columns: 1fr; gap: 2rem;
@@ -113,41 +116,43 @@
         .view-content { display: none; animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px);} to { opacity: 1; transform: translateY(0);} }
 
+        /* Card redesign */
         .search-card, .form-card, .table-card {
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: var(--border-radius);
-            box-shadow: var(--shadow-lg); overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.2);
+            background: var(--white); border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg); overflow: hidden; border: 1px solid var(--medium-gray);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         .search-card:hover, .form-card:hover, .table-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-xl); }
 
         .card-header {
-            padding: 1.5rem 2rem; background: linear-gradient(135deg, var(--gray-50), var(--gray-100));
-            border-bottom: 1px solid var(--gray-200); display: flex; justify-content: space-between; align-items: center;
+            padding: 1.25rem 2rem; background: linear-gradient(135deg, var(--light-blue) 0%, var(--primary-blue) 100%);
+            border-bottom: 1px solid var(--medium-gray); display: flex; justify-content: space-between; align-items: center;
         }
         .card-header h2 {
-            font-size: 1.375rem; font-weight: 700; background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; display: flex; align-items: center; gap: 0.75rem;
+            font-size: 1.25rem; font-weight: 700; color: var(--white); display: flex; align-items: center; gap: 0.75rem;
         }
 
+        /* Form redesign */
         .filter-form, .bl-form, .login-form { padding: 2rem; }
         .filter-grid, .form-grid, .login-grid {
             display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;
         }
         .filter-group, .form-group, .login-group { position: relative; }
 
-        label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 600; color: var(--gray-700);
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 600; color: var(--primary-blue);
             text-transform: uppercase; letter-spacing: 0.025em; }
 
         select, input[type="text"], input[type="number"], input[type="date"], input[type="password"] {
-            width: 100%; padding: 0.875rem 1rem 0.875rem 2.5rem; border: 2px solid var(--gray-200);
-            border-radius: var(--border-radius-sm); font-size: 0.95rem; transition: all 0.3s ease; background: white; color: var(--gray-800);
+            width: 100%; padding: 0.875rem 1rem 0.875rem 2.5rem; border: 2px solid var(--medium-gray);
+            border-radius: var(--border-radius-sm); font-size: 0.95rem; transition: all 0.3s ease; background: var(--white); color: #334155;
         }
-        select:focus, input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); transform: translateY(-1px); }
+        select:focus, input:focus { outline: none; border-color: var(--light-blue); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); transform: translateY(-1px); }
 
         .input-icon {
-            position: absolute; left: 0.75rem; top: 2.5rem; color: var(--gray-400); font-size: 1rem; pointer-events: none;
+            position: absolute; left: 0.75rem; top: 2.5rem; color: var(--dark-gray); font-size: 1rem; pointer-events: none;
         }
 
+        /* Button redesign */
         .btn {
             display: inline-flex; align-items: center; justify-content: center; padding: 0.875rem 1.5rem;
             border-radius: var(--border-radius-sm); font-size: 0.925rem; font-weight: 600; cursor: pointer;
@@ -155,29 +160,51 @@
             position: relative; overflow: hidden;
         }
         .btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); transition: left 0.5s; }
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent); transition: left 0.5s; }
         .btn:hover::before { left: 100%; }
-        .primary-btn { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; box-shadow: var(--shadow); }
-        .primary-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-        .secondary-btn { background: white; color: var(--primary); border: 2px solid var(--primary); }
-        .secondary-btn:hover { background: var(--primary); color: white; transform: translateY(-2px); box-shadow: var(--shadow); }
-        .danger-btn { background: linear-gradient(135deg, var(--danger), #dc2626); color: white; }
-        .danger-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
-        .export-btn { background: linear-gradient(135deg, #34d399, #059669); color: white; }
-        .export-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .primary-btn { background: var(--light-blue); color: var(--white); box-shadow: var(--shadow); }
+        .primary-btn:hover { background: var(--primary-blue); transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .secondary-btn { background: var(--white); color: var(--primary-blue); border: 2px solid var(--light-blue); }
+        .secondary-btn:hover { background: var(--light-blue); color: var(--white); transform: translateY(-2px); box-shadow: var(--shadow); }
+        .danger-btn { background: var(--red); color: var(--white); }
+        .danger-btn:hover { background: #dc2626; transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .export-btn { background: var(--light-green); color: var(--white); }
+        .export-btn:hover { background: #059669; transform: translateY(-2px); box-shadow: var(--shadow-lg); }
         .filter-actions, .form-actions, .login-actions { display: flex; gap: 1rem; justify-content: flex-end; flex-wrap: wrap; }
 
-        .table-controls { display: flex; align-items: center; gap: 1rem; }
+        /* Table controls redesign */
+        .table-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            background: var(--light-gray);
+            padding: 1rem;
+            border-radius: var(--border-radius-sm);
+            margin-bottom: 1rem;
+        }
         .group-option { display: flex; align-items: center; gap: 0.5rem; }
-        .group-option input[type="checkbox"] { width: 1.25rem; height: 1.25rem; accent-color: var(--primary); }
-        .group-option label { font-size: 0.9rem; font-weight: 500; margin: 0; color: var(--gray-700); text-transform: none; letter-spacing: normal; }
+        .group-option input[type="checkbox"] { width: 1.25rem; height: 1.25rem; accent-color: var(--light-blue); }
+        .group-option label { font-size: 0.9rem; font-weight: 500; margin: 0; color: var(--primary-blue); text-transform: none; letter-spacing: normal; }
 
-        .table-responsive { overflow-x: auto; border-radius: var(--border-radius-sm); }
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: white; }
-        th, td { padding: 0.75rem 0.5rem; text-align: left; border-bottom: 1px solid var(--gray-200); }
+        /* Table redesign */
+        .table-container {
+            padding: 0 1rem 1rem;
+        }
+        
+        .table-responsive { 
+            overflow-x: auto; 
+            border-radius: var(--border-radius-sm); 
+            border: 1px solid var(--medium-gray);
+            max-height: 60vh;
+            position: relative;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; background: var(--white); }
+        th, td { padding: 0.75rem 0.5rem; text-align: left; border-bottom: 1px solid var(--medium-gray); }
         th {
-            background: linear-gradient(135deg, var(--gray-100), var(--gray-200)); font-weight: 700; color: var(--gray-800);
+            background: var(--light-gray); font-weight: 700; color: var(--primary-blue);
             text-transform: uppercase; letter-spacing: 0.025em; font-size: 0.75rem; position: sticky; top: 0; z-index: 10;
+            border-bottom: 2px solid var(--light-blue);
         }
         th:nth-child(1), td:nth-child(1) { width: 8%; }
         th:nth-child(2), td:nth-child(2) { width: 8%; }
@@ -192,50 +219,49 @@
         th:nth-child(11), td:nth-child(11) { width: 6%; }
         th:nth-child(12), td:nth-child(12) { width: 8%; }
         th:nth-child(13), td:nth-child(13) { width: 6%; }
-        th:nth-child(14), td:nth-child(14) { width: 6%; }
+        th:nth-child(14), td:nth-child(14) { width: 10%; }
         tbody tr { transition: all 0.2s ease; }
-        tbody tr:hover { background: var(--gray-50); transform: scale(1.001); }
+        tbody tr:hover { background: #f1f5f9; transform: scale(1.001); }
         tbody tr.completed { background: linear-gradient(135deg, #ecfdf5, #f0fdf4); }
-        tbody tr.group-summary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; font-weight: 600; }
+        tbody tr.group-summary { background: var(--light-blue); color: var(--white); font-weight: 600; }
 
-        .relance-cell { font-size: 0.8rem; font-weight: 600; color: var(--gray-600); }
-        .alert-cell { font-size: 0.8rem; font-weight: 600; color: var(--warning); }
+        .relance-cell { font-size: 0.8rem; font-weight: 600; color: var(--primary-blue); }
+        .alert-cell { font-size: 0.8rem; font-weight: 600; color: var(--red); }
 
-        .status-btn, .edit-btn, .delete-btn { padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.025em; }
-        .status-pending { background: linear-gradient(135deg, var(--warning), #fbbf24); color: white; }
-        .status-completed { background: linear-gradient(135deg, var(--success), #059669); color: white; }
-        .edit-btn { background: linear-gradient(135deg, var(--accent), var(--primary)); color: white; }
-        .delete-btn { background: linear-gradient(135deg, var(--danger), #dc2626); color: white; }
+        .status-btn, .edit-btn, .delete-btn { padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: none; cursor: pointer; transition: all 0.3s ease; text-transform: uppercase; letter-spacing: 0.025em; margin: 0.2rem; }
+        .status-pending { background: linear-gradient(135deg, var(--orange), #ea580c); color: var(--white); }
+        .status-completed { background: var(--light-green); color: var(--white); }
+        .edit-btn { background: var(--light-blue); color: var(--white); }
+        .delete-btn { background: var(--red); color: var(--white); }
         .status-btn:hover, .edit-btn:hover, .delete-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
 
-        .date-input { width: 100%; padding: 0.5rem; border: 2px solid var(--gray-200); border-radius: var(--border-radius-sm); font-size: 0.85rem; }
-        .date-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); }
+        .date-input { width: 100%; padding: 0.5rem; border: 2px solid var(--medium-gray); border-radius: var(--border-radius-sm); font-size: 0.85rem; }
+        .date-input:focus { outline: none; border-color: var(--light-blue); box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1); }
 
         .icon-btn {
             width: 2.5rem; height: 2.5rem; padding: 0; border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.2); color: var(--white); border: 1px solid rgba(255, 255, 255, 0.3);
             cursor: pointer; transition: all 0.3s ease; backdrop-filter: blur(10px);
         }
-        .icon-btn:hover { background: rgba(255, 255, 255, 0.3); transform: scale(1.1); }
+        .icon-btn:hover { background: rgba(255, 255, 255, 0.3); color: var(--white); transform: scale(1.1); }
 
-        /* Styles pour l'écran de connexion */
+        /* Login screen redesign */
         .login-container {
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 90vh;
+            min-height: 100vh;
             padding: 2rem;
-            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            background: linear-gradient(135deg, var(--light-blue) 0%, var(--primary-blue) 100%);
         }
         .login-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+            background: var(--white);
             border-radius: var(--border-radius);
             box-shadow: var(--shadow-xl);
             padding: 3rem;
             width: 100%;
             max-width: 450px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid var(--medium-gray);
             transform: translateY(20px);
             animation: slideIn 0.5s ease forwards;
         }
@@ -252,39 +278,38 @@
         }
         .login-logo:hover { transform: scale(1.05); }
         .login-error {
-            color: var(--danger);
+            color: var(--red);
             font-size: 0.9rem;
             margin-bottom: 1rem;
             text-align: center;
             display: none;
         }
 
-        /* Styles pour le panneau de profil */
+        /* Profile panel redesign */
         .profile-panel {
             position: absolute; top: 70px; right: 2rem; width: 250px;
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
-            border-radius: var(--border-radius); box-shadow: var(--shadow-lg);
-            border: 1px solid rgba(255, 255, 255, 0.2); padding: 1.5rem;
+            background: var(--white); border-radius: var(--border-radius); box-shadow: var(--shadow-lg);
+            border: 1px solid var(--medium-gray); padding: 1.5rem;
             display: none; z-index: 100; transition: all 0.3s ease;
         }
         .profile-panel.active { display: block; }
         .profile-info {
             display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;
         }
-        .profile-info i { font-size: 2rem; color: var(--primary); }
-        .profile-info span { font-weight: 600; color: var(--gray-700); }
+        .profile-info i { font-size: 2rem; color: var(--light-blue); }
+        .profile-info span { font-weight: 600; color: var(--primary-blue); }
         .profile-actions { display: flex; justify-content: flex-end; }
         .logout-btn {
-            background: linear-gradient(135deg, var(--danger), #dc2626); color: white;
+            background: var(--red); color: var(--white);
             padding: 0.5rem 1rem; border-radius: var(--border-radius-sm); font-size: 0.9rem;
             font-weight: 600; cursor: pointer; transition: all 0.3s ease;
         }
         .logout-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
 
-        /* Styles pour les notifications */
+        /* Notifications redesign */
         .notification {
             position: fixed; top: 20px; right: 20px; padding: 1rem 1.5rem; border-radius: 8px;
-            color: white; font-weight: 600; z-index: 1000; transform: translateX(400px);
+            color: var(--white); font-weight: 600; z-index: 1000; transform: translateX(400px);
             transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             display: flex; align-items: center; gap: 1rem; max-width: 400px;
         }
@@ -294,22 +319,73 @@
         .notification .close-btn:hover { opacity: 1; }
         .notification-history {
             position: fixed; top: 80px; right: 2rem; width: 300px; max-height: 400px; overflow-y: auto;
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
-            border-radius: var(--border-radius); box-shadow: var(--shadow-lg);
-            border: 1px solid rgba(255, 255, 255, 0.2); padding: 1rem; display: none; z-index: 100;
+            background: var(--white); border-radius: var(--border-radius); box-shadow: var(--shadow-lg);
+            border: 1px solid var(--medium-gray); padding: 1rem; display: none; z-index: 100;
         }
         .notification-history.active { display: block; }
         .notification-history-item {
-            padding: 0.5rem; border-bottom: 1px solid var(--gray-200); font-size: 0.85rem;
-            color: var(--gray-700); display: flex; align-items: center; gap: 0.5rem;
+            padding: 0.5rem; border-bottom: 1px solid var(--medium-gray); font-size: 0.85rem;
+            color: var(--primary-blue); display: flex; align-items: center; gap: 0.5rem;
         }
         .notification-history-item:last-child { border-bottom: none; }
+
+        /* Action buttons container */
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* Stats cards */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            border-left: 4px solid var(--light-blue);
+        }
+        
+        .stat-card.pending {
+            border-left-color: var(--orange);
+        }
+        
+        .stat-card.completed {
+            border-left-color: var(--light-green);
+        }
+        
+        .stat-card.total {
+            border-left-color: var(--purple);
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-blue);
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--dark-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
 
         @media (max-width: 768px) {
             .app-main { padding: 1rem; grid-template-columns: 1fr; }
             .header-content { padding: 0 1rem; flex-wrap: wrap; gap: 1rem; }
-            .header-logo { max-width: 100px; }
-            .nav-menu { flex-wrap: wrap; gap: 1rem; justify-content: flex-start; }
+            .header-logo { max-width: 40px; }
+            .header-title h1 { font-size: 1.2rem; }
+            .nav-menu { flex-wrap: wrap; gap: 0.5rem; justify-content: flex-start; }
             .profile-panel, .notification-history { right: 1rem; width: 90%; max-width: 300px; }
             .filter-grid, .form-grid, .login-grid { grid-template-columns: 1fr; gap: 1rem; }
             .filter-actions, .form-actions, .login-actions { flex-direction: column; }
@@ -330,18 +406,24 @@
             th:nth-child(11), td:nth-child(11) { width: auto; min-width: 50px; }
             th:nth-child(12), td:nth-child(12) { width: auto; min-width: 60px; }
             th:nth-child(13), td:nth-child(13) { width: auto; min-width: 50px; }
-            th:nth-child(14), td:nth-child(14) { width: auto; min-width: 50px; }
+            th:nth-child(14), td:nth-child(14) { width: auto; min-width: 100px; }
             .login-card { padding: 2rem; max-width: 350px; }
             .login-logo { max-width: 150px; }
             .datetime { font-size: 0.8rem; padding: 0.4rem 0.8rem; }
+            .action-buttons {
+                flex-direction: column;
+            }
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 480px) {
-            .header-logo { max-width: 80px; }
-            .header-title h1 { font-size: 1.25rem; }
-            .header-title h1 i { font-size: 1.5rem; }
+            .header-logo { max-width: 35px; }
+            .header-title h1 { font-size: 1rem; }
+            .header-title h1 i { font-size: 1.2rem; }
             .app-main { padding: 0.5rem; }
-            .nav-item { padding: 0.5rem 1rem; }
+            .nav-item { padding: 0.5rem 1rem; font-size: 0.9rem; }
             .login-card { padding: 1.5rem; }
             .datetime { font-size: 0.75rem; }
         }
@@ -350,7 +432,7 @@
 <body>
     <div id="login-container" class="login-container">
         <section class="login-card">
-            <img src="logo_ace.png" alt="Logo de l'entreprise" class="login-logo">
+            <img src="ACE_LOG.jpg" alt="Logo de l'entreprise" class="login-logo">
             <div class="card-header">
                 <h2><i class="fas fa-sign-in-alt"></i> Connexion</h2>
             </div>
@@ -378,9 +460,11 @@
     <div id="app-container" class="app-container" style="display: none;">
         <header class="app-header">
             <div class="header-content">
-                <img src="logo_ace.png" alt="Logo de l'entreprise" class="header-logo">
-                <div class="header-title">
-                    <h1><i class="fas fa-file-invoice"></i> Gestion des BL</h1>
+                <div class="header-logo-container">
+                    <img src="ace.png" alt="Logo de l'entreprise" class="header-logo">
+                    <div class="header-title">
+                        <h1><i class="fas fa-file-invoice"></i> Gestion des BL</h1>
+                    </div>
                 </div>
                 <div class="header-right">
                     <div class="datetime" id="datetime"></div>
@@ -444,9 +528,27 @@
                     </form>
                 </section>
 
+                <div class="stats-container">
+                    <div class="stat-card total">
+                        <div class="stat-value" id="total-bl">0</div>
+                        <div class="stat-label">Total des BL</div>
+                    </div>
+                    <div class="stat-card pending">
+                        <div class="stat-value" id="pending-bl">0</div>
+                        <div class="stat-label">BL en cours</div>
+                    </div>
+                    <div class="stat-card completed">
+                        <div class="stat-value" id="completed-bl">0</div>
+                        <div class="stat-label">BL terminés</div>
+                    </div>
+                </div>
+
                 <section class="table-card">
                     <div class="card-header">
                         <h2><i class="fas fa-list"></i> Liste des BL</h2>
+                    </div>
+                    
+                    <div class="table-container">
                         <div class="table-controls">
                             <div class="group-option">
                                 <input type="checkbox" id="groupSimilar" checked>
@@ -455,33 +557,32 @@
                             <button id="exportExcel" class="btn export-btn"><i class="fas fa-file-excel"></i> Exporter en Excel</button>
                             <button id="exportPDF" class="btn export-btn"><i class="fas fa-file-pdf"></i> Exporter en PDF</button>
                         </div>
-                    </div>
 
-                    <div class="table-responsive">
-                        <table id="blTable">
-                            <thead>
-                                <tr>
-                                    <th><i class="fas fa-university"></i> Banque</th>
-                                    <th><i class="fas fa-user"></i> Client</th>
-                                    <th><i class="fas fa-truck"></i> Transitaire</th>
-                                    <th><i class="fas fa-box"></i> Produit</th>
-                                    <th><i class="fas fa-hashtag"></i> N°DAS</th>
-                                    <th><i class="fas fa-weight"></i> Poids</th>
-                                    <th><i class="fas fa-calendar"></i> Date Empotage</th>
-                                    <th><i class="fas fa-bell"></i> R1</th>
-                                    <th><i class="fas fa-bell"></i> R2</th>
-                                    <th><i class="fas fa-bell"></i> R3</th>
-                                    <th><i class="fas fa-bell"></i> R4</th>
-                                    <th><i class="fas fa-exclamation-triangle"></i> Alerte Banque</th>
-                                    <th><i class="fas fa-tasks"></i> Statut</th>
-                                    <th><i class="fas fa-edit"></i> Action</th>
-                                    <th><i class="fas fa-trash"></i> Supprimer</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Rempli dynamiquement -->
-                            </tbody>
-                        </table>
+                        <div class="table-responsive">
+                            <table id="blTable">
+                                <thead>
+                                    <tr>
+                                        <th><i class="fas fa-university"></i> Banque</th>
+                                        <th><i class="fas fa-user"></i> Client</th>
+                                        <th><i class="fas fa-truck"></i> Transitaire</th>
+                                        <th><i class="fas fa-box"></i> Produit</th>
+                                        <th><i class="fas fa-hashtag"></i> N°DAS</th>
+                                        <th><i class="fas fa-weight"></i> Poids</th>
+                                        <th><i class="fas fa-calendar"></i> Date Empotage</th>
+                                        <th><i class="fas fa-bell"></i> R1</th>
+                                        <th><i class="fas fa-bell"></i> R2</th>
+                                        <th><i class="fas fa-bell"></i> R3</th>
+                                        <th><i class="fas fa-bell"></i> R4</th>
+                                        <th><i class="fas fa-exclamation-triangle"></i> Alerte Banque</th>
+                                        <th><i class="fas fa-tasks"></i> Statut</th>
+                                        <th><i class="fas fa-cogs"></i> Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Rempli dynamiquement -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -536,7 +637,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="date_accord_banque">Date accord banque</label>
-                                <input type="date" id="date_accord_banque" name="date_accord_banque">
+                                <input type="date" id="date_accord_banque" name="date_accord_banque" max="">
                             </div>
                         </div>
                         <div class="form-actions">
@@ -576,6 +677,10 @@
             const notificationHistory = document.getElementById('notification-history');
             const navItems = document.querySelectorAll('.nav-item');
             const datetimeDisplay = document.getElementById('datetime');
+            const dateAccordBanqueInput = document.getElementById('date_accord_banque');
+            const totalBlElement = document.getElementById('total-bl');
+            const pendingBlElement = document.getElementById('pending-bl');
+            const completedBlElement = document.getElementById('completed-bl');
             const views = {
                 dashboard: document.getElementById('dashboard-view'),
                 'new-bl': document.getElementById('new-bl-view')
@@ -586,6 +691,23 @@
             let notificationHistoryItems = [];
             let editMode = false;
             let currentUserId = sessionStorage.getItem('userId') || 'Utilisateur';
+
+            // Définir la date maximale pour les champs de date (aujourd'hui)
+            function setMaxDateForInputs() {
+                const today = new Date().toISOString().split('T')[0];
+                dateAccordBanqueInput.setAttribute('max', today);
+            }
+
+            // Mettre à jour les statistiques
+            function updateStats() {
+                const total = bls.length;
+                const pending = bls.filter(bl => bl.statut === 'pending').length;
+                const completed = bls.filter(bl => bl.statut === 'completed').length;
+                
+                totalBlElement.textContent = total;
+                pendingBlElement.textContent = pending;
+                completedBlElement.textContent = completed;
+            }
 
             // Affichage de la date et de l'heure en temps réel
             function updateDateTime() {
@@ -602,6 +724,7 @@
                 loginContainer.style.display = 'none';
                 appContainer.style.display = 'flex';
                 userIdSpan.textContent = currentUserId;
+                setMaxDateForInputs();
                 loadBLs();
             }
 
@@ -628,6 +751,7 @@
                         userIdSpan.textContent = loginData.id;
                         loginContainer.style.display = 'none';
                         appContainer.style.display = 'flex';
+                        setMaxDateForInputs();
                         showNotification('Connexion réussie', 'success', 5000);
                         loadBLs();
                     } else {
@@ -723,6 +847,7 @@
                 try {
                     const res = await fetch(API_URL);
                     bls = await res.json();
+                    updateStats();
                     updateTable();
                 } catch (e) {
                     showNotification("Erreur de chargement des BL", "error");
@@ -805,6 +930,7 @@
                 blIdInput.value = '';
                 formTitle.innerHTML = '<i class="fas fa-plus-circle"></i> Créer un nouveau BL';
                 blForm.querySelector('.primary-btn').innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+                setMaxDateForInputs();
             }
 
             function editBL(bl) {
@@ -820,6 +946,7 @@
                 formTitle.innerHTML = '<i class="fas fa-edit"></i> Modifier le BL';
                 blForm.querySelector('.primary-btn').innerHTML = '<i class="fas fa-save"></i> Mettre à jour';
                 document.querySelector('.nav-item[data-view="new-bl"]').click();
+                setMaxDateForInputs();
             }
 
             function filterBLs(items, filters) {
@@ -864,7 +991,7 @@
                 tableBody.innerHTML = '';
                 if (!items.length) {
                     const row = document.createElement('tr');
-                    row.innerHTML = `<td colspan="15" style="text-align:center; padding:3rem; color: var(--gray-500); font-style: italic;">
+                    row.innerHTML = `<td colspan="14" style="text-align:center; padding:3rem; color: var(--primary-blue); font-style: italic;">
                         <i class="fas fa-inbox" style="font-size:2rem; margin-bottom:1rem; display:block;"></i>Aucun BL trouvé
                     </td>`;
                     tableBody.appendChild(row);
@@ -882,9 +1009,10 @@
                             <td><strong>Total (${item.count} BL)</strong></td>
                             <td><strong>${item.count}</strong></td>
                             <td><strong>${item.totalPoids} kg</strong></td>
-                            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>`;
+                            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>`;
                     } else {
                         if (item.statut === 'completed') tr.classList.add('completed');
+                        const today = new Date().toISOString().split('T')[0];
                         tr.innerHTML = `
                             <td><i class="fas fa-university"></i> ${item.banque}</td>
                             <td><i class="fas fa-user"></i> ${item.client}</td>
@@ -892,7 +1020,7 @@
                             <td><i class="fas fa-box"></i> ${item.produit}</td>
                             <td><i class="fas fa-hashtag"></i> ${item.numero_das}</td>
                             <td><i class="fas fa-weight"></i> ${item.poids} kg</td>
-                            <td><input type="date" class="date-input" data-id="${item.id}" value="${item.date_empotage || ''}"></td>
+                            <td><input type="date" class="date-input" data-id="${item.id}" value="${item.date_empotage || ''}" max="${today}"></td>
                             <td class="relance-cell">${formatDisplay(item.relance_r1)}</td>
                             <td class="relance-cell">${formatDisplay(item.relance_r2)}</td>
                             <td class="relance-cell">${formatDisplay(item.relance_r3)}</td>
@@ -905,10 +1033,10 @@
                                 </button>
                             </td>
                             <td>
-                                <button class="edit-btn" data-id="${item.id}"><i class="fas fa-edit"></i> Modifier</button>
-                            </td>
-                            <td>
-                                <button class="delete-btn" data-id="${item.id}"><i class="fas fa-trash"></i> Supprimer</button>
+                                <div class="action-buttons">
+                                    <button class="edit-btn" data-id="${item.id}"><i class="fas fa-edit"></i> Modifier</button>
+                                    <button class="delete-btn" data-id="${item.id}"><i class="fas fa-trash"></i> Supprimer</button>
+                                </div>
                             </td>`;
                     }
                     tableBody.appendChild(tr);
@@ -966,45 +1094,63 @@
                 let data = filterBLs(bls, filters);
                 if (shouldGroup) data = groupSimilarBLs(data);
 
+                // Create workbook and worksheet
+                const wb = XLSX.utils.book_new();
+                
+                // Prepare data for export
                 const exportData = data.map(item => {
                     if (item.isSummary) {
                         return {
-                            Banque: '',
-                            Client: '',
-                            Transitaire: '',
-                            Produit: `Total (${item.count} BL)`,
-                            'N°DAS': item.count,
-                            Poids: `${item.totalPoids} kg`,
+                            'Banque': '',
+                            'Client': '',
+                            'Transitaire': '',
+                            'Produit': `Total (${item.count} BL)`,
+                            'N° DAS': item.count,
+                            'Poids (kg)': item.totalPoids,
                             'Date Empotage': '',
-                            R1: '',
-                            R2: '',
-                            R3: '',
-                            R4: '',
+                            'Relance R1': '',
+                            'Relance R2': '',
+                            'Relance R3': '',
+                            'Relance R4': '',
                             'Alerte Banque': '',
-                            Statut: ''
+                            'Statut': ''
                         };
                     }
                     return {
-                        Banque: item.banque,
-                        Client: item.client,
-                        Transitaire: item.transitaire,
-                        Produit: item.produit,
-                        'N°DAS': item.numero_das,
-                        Poids: `${item.poids} kg`,
+                        'Banque': item.banque,
+                        'Client': item.client,
+                        'Transitaire': item.transitaire,
+                        'Produit': item.produit,
+                        'N° DAS': item.numero_das,
+                        'Poids (kg)': item.poids,
                         'Date Empotage': formatDisplay(item.date_empotage),
-                        R1: formatDisplay(item.relance_r1),
-                        R2: formatDisplay(item.relance_r2),
-                        R3: formatDisplay(item.relance_r3),
-                        R4: formatDisplay(item.relance_r4),
+                        'Relance R1': formatDisplay(item.relance_r1),
+                        'Relance R2': formatDisplay(item.relance_r2),
+                        'Relance R3': formatDisplay(item.relance_r3),
+                        'Relance R4': formatDisplay(item.relance_r4),
                         'Alerte Banque': formatDisplay(item.date_alerte_banque),
-                        Statut: item.statut === 'completed' ? 'Terminé' : 'En cours'
+                        'Statut': item.statut === 'completed' ? 'Terminé' : 'En cours'
                     };
                 });
 
+                // Create worksheet
                 const ws = XLSX.utils.json_to_sheet(exportData);
-                const wb = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(wb, ws, 'BLs');
-                XLSX.writeFile(wb, 'Liste_des_BLs.xlsx');
+                
+                // Set column widths
+                const colWidths = [
+                    { wch: 15 }, { wch: 15 }, { wch: 15 }, 
+                    { wch: 20 }, { wch: 15 }, { wch: 12 },
+                    { wch: 15 }, { wch: 12 }, { wch: 12 },
+                    { wch: 12 }, { wch: 12 }, { wch: 15 },
+                    { wch: 12 }
+                ];
+                ws['!cols'] = colWidths;
+                
+                // Add worksheet to workbook
+                XLSX.utils.book_append_sheet(wb, ws, 'Liste des BLs');
+                
+                // Generate Excel file
+                XLSX.writeFile(wb, 'Liste_des_BLs_' + new Date().toISOString().slice(0, 10) + '.xlsx');
                 showNotification('Exportation Excel réussie', 'success', 5000);
             }
 
@@ -1025,69 +1171,110 @@
                         // En-tête
                         doc.setFontSize(16);
                         doc.setFont('helvetica', 'bold');
-                        doc.text('Liste des BL', 20, 20);
+                        doc.setTextColor(30, 64, 175);
+                        doc.text('LISTE DES BL', 105, 20, { align: 'center' });
+                        
                         doc.setFontSize(10);
                         doc.setFont('helvetica', 'normal');
-                        doc.text(`Exporté le ${new Date().toLocaleDateString('fr-FR')}`, 20, 30);
+                        doc.setTextColor(100, 116, 139);
+                        doc.text(`Exporté le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, 105, 28, { align: 'center' });
 
                         // Tableau
-                        const columns = ['Banque', 'Client', 'Transitaire', 'Produit', 'N°DAS', 'Poids', 'Date Empotage', 'R1', 'R2', 'R3', 'R4', 'Alerte Banque', 'Statut'];
+                        const columns = [
+                            { header: 'Banque', dataKey: 'banque' },
+                            { header: 'Client', dataKey: 'client' },
+                            { header: 'Transitaire', dataKey: 'transitaire' },
+                            { header: 'Produit', dataKey: 'produit' },
+                            { header: 'N°DAS', dataKey: 'numero_das' },
+                            { header: 'Poids', dataKey: 'poids' },
+                            { header: 'Date Empotage', dataKey: 'date_empotage' },
+                            { header: 'R1', dataKey: 'relance_r1' },
+                            { header: 'R2', dataKey: 'relance_r2' },
+                            { header: 'R3', dataKey: 'relance_r3' },
+                            { header: 'R4', dataKey: 'relance_r4' },
+                            { header: 'Alerte Banque', dataKey: 'date_alerte_banque' },
+                            { header: 'Statut', dataKey: 'statut' }
+                        ];
+                        
                         const rows = data.map(item => {
                             if (item.isSummary) {
-                                return ['', '', '', `Total (${item.count} BL)`, item.count, `${item.totalPoids} kg`, '', '', '', '', '', '', ''];
+                                return {
+                                    banque: '',
+                                    client: '',
+                                    transitaire: '',
+                                    produit: `Total (${item.count} BL)`,
+                                    numero_das: item.count,
+                                    poids: `${item.totalPoids} kg`,
+                                    date_empotage: '',
+                                    relance_r1: '',
+                                    relance_r2: '',
+                                    relance_r3: '',
+                                    relance_r4: '',
+                                    date_alerte_banque: '',
+                                    statut: ''
+                                };
                             }
-                            return [
-                                item.banque,
-                                item.client,
-                                item.transitaire,
-                                item.produit,
-                                item.numero_das,
-                                `${item.poids} kg`,
-                                formatDisplay(item.date_empotage),
-                                formatDisplay(item.relance_r1),
-                                formatDisplay(item.relance_r2),
-                                formatDisplay(item.relance_r3),
-                                formatDisplay(item.relance_r4),
-                                formatDisplay(item.date_alerte_banque),
-                                item.statut === 'completed' ? 'Terminé' : 'En cours'
-                            ];
+                            return {
+                                banque: item.banque,
+                                client: item.client,
+                                transitaire: item.transitaire,
+                                produit: item.produit,
+                                numero_das: item.numero_das,
+                                poids: `${item.poids} kg`,
+                                date_empotage: formatDisplay(item.date_empotage),
+                                relance_r1: formatDisplay(item.relance_r1),
+                                relance_r2: formatDisplay(item.relance_r2),
+                                relance_r3: formatDisplay(item.relance_r3),
+                                relance_r4: formatDisplay(item.relance_r4),
+                                date_alerte_banque: formatDisplay(item.date_alerte_banque),
+                                statut: item.statut === 'completed' ? 'Terminé' : 'En cours'
+                            };
                         });
 
                         doc.autoTable({
-                            head: [columns],
+                            columns: columns,
                             body: rows,
-                            startY: 50,
+                            startY: 40,
                             theme: 'grid',
-                            styles: { fontSize: 8, cellPadding: 3, textColor: [33, 33, 33], font: 'helvetica' },
-                            headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255], fontStyle: 'bold' },
-                            columnStyles: {
-                                0: { cellWidth: 14 },
-                                1: { cellWidth: 14 },
-                                2: { cellWidth: 14 },
-                                3: { cellWidth: 18 },
-                                4: { cellWidth: 14 },
-                                5: { cellWidth: 12 },
-                                6: { cellWidth: 14 },
-                                7: { cellWidth: 10 },
-                                8: { cellWidth: 10 },
-                                9: { cellWidth: 10 },
-                                10: { cellWidth: 10 },
-                                11: { cellWidth: 14 },
-                                12: { cellWidth: 10 }
+                            styles: { 
+                                fontSize: 8, 
+                                cellPadding: 3, 
+                                textColor: [51, 65, 85], 
+                                font: 'helvetica',
+                                lineColor: [226, 232, 240]
                             },
+                            headStyles: { 
+                                fillColor: [30, 64, 175], 
+                                textColor: [255, 255, 255], 
+                                fontStyle: 'bold',
+                                lineWidth: 0.1
+                            },
+                            alternateRowStyles: {
+                                fillColor: [248, 250, 252]
+                            },
+                            margin: { top: 40 },
                             didDrawPage: (data) => {
                                 // Ajouter le logo après le rendu de la première page
-                                if (data.pageCount === 1) {
+                                if (data.pageNumber === 1) {
                                     try {
-                                        doc.addImage(logo, 'PNG', 10, 10, 40, 20);
+                                        doc.addImage(logo, 'PNG', 14, 10, 40, 20);
                                     } catch (e) {
                                         console.warn('Échec du chargement du logo:', e);
                                     }
                                 }
+                                
+                                // Footer avec numéro de page
+                                const pageCount = doc.internal.getNumberOfPages();
+                                doc.setFontSize(10);
+                                doc.setTextColor(100, 116, 139);
+                                for (let i = 1; i <= pageCount; i++) {
+                                    doc.setPage(i);
+                                    doc.text(`Page ${i} sur ${pageCount}`, doc.internal.pageSize.width / 2, doc.internal.pageSize.height - 10, { align: 'center' });
+                                }
                             }
                         });
 
-                        doc.save('Liste_des_BLs.pdf');
+                        doc.save('Liste_des_BL_' + new Date().toISOString().slice(0, 10) + '.pdf');
                         showNotification('Exportation PDF réussie', 'success', 5000);
                     };
 
@@ -1106,12 +1293,12 @@
                 const notification = document.createElement('div');
                 notification.className = 'notification';
                 notification.style.background = type === 'success'
-                    ? 'linear-gradient(135deg, var(--success), #059669)'
+                    ? 'linear-gradient(135deg, var(--light-green), #059669)'
                     : type === 'error'
-                        ? 'linear-gradient(135deg, var(--danger), #dc2626)'
+                        ? 'linear-gradient(135deg, var(--red), #dc2626)'
                         : type === 'warning'
-                            ? 'linear-gradient(135deg, var(--warning), #d97706)'
-                            : 'linear-gradient(135deg, var(--primary), var(--secondary))';
+                            ? 'linear-gradient(135deg, #f59e0b, #d97706)'
+                            : 'linear-gradient(135deg, var(--light-blue), var(--primary-blue))';
                 notification.innerHTML = `
                     <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : type === 'warning' ? 'exclamation-triangle' : 'info'}-circle"></i>
                     ${message}
