@@ -380,6 +380,11 @@
             letter-spacing: 0.05em;
         }
 
+        /* User management view */
+        #user-management-view {
+            display: none;
+        }
+
         @media (max-width: 768px) {
             .app-main { padding: 1rem; grid-template-columns: 1fr; }
             .header-content { padding: 0 1rem; flex-wrap: wrap; gap: 1rem; }
@@ -442,7 +447,7 @@
                     <div class="login-group">
                         <label for="login_id">Identifiant</label>
                         <i class="fas fa-user input-icon"></i>
-                        <input type="text" id="login_id" name="id" required placeholder="Identifiant">
+                        <input type="text" id="login_id" name="username" required placeholder="Identifiant">
                     </div>
                     <div class="login-group">
                         <label for="login_password">Mot de passe</label>
@@ -475,6 +480,7 @@
             <nav class="nav-menu">
                 <span class="nav-item active" data-view="dashboard"><i class="fas fa-chart-line"></i> Tableau de bord</span>
                 <span class="nav-item" data-view="new-bl"><i class="fas fa-plus-circle"></i> Nouveau BL</span>
+                <span class="nav-item" data-view="user-management" style="display: none;" id="adminNavItem"><i class="fas fa-users-cog"></i> Gestion Utilisateurs</span>
             </nav>
             <div id="profile-panel" class="profile-panel">
                 <div class="profile-info">
@@ -647,6 +653,59 @@
                     </form>
                 </section>
             </div>
+
+            <div id="user-management-view" class="view-content">
+                <section class="form-card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-user-plus"></i> Créer un nouvel utilisateur</h2>
+                    </div>
+                    <form id="userForm" class="bl-form">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="new_username">Nom d'utilisateur</label>
+                                <input type="text" id="new_username" name="username" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="new_password">Mot de passe</label>
+                                <input type="password" id="new_password" name="password" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="user_role">Rôle</label>
+                                <select id="user_role" name="role">
+                                    <option value="standard">Utilisateur Standard</option>
+                                    <option value="admin">Administrateur</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn primary-btn">Créer l'utilisateur</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="table-card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-users"></i> Liste des utilisateurs</h2>
+                    </div>
+                    <div class="table-container">
+                        <table id="usersTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nom d'utilisateur</th>
+                                    <th>Rôle</th>
+                                    <th>Créé le</th>
+                                    <th>Statut</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Rempli dynamiquement -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
         </main>
     </div>
 
@@ -654,6 +713,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const API_URL = 'bl_api.php';
             const LOGIN_API_URL = 'login_api.php';
+            const USER_API_URL = 'user_management_api.php';
             const { jsPDF } = window.jspdf;
 
             // Éléments DOM
@@ -662,10 +722,12 @@
             const loginForm = document.getElementById('loginForm');
             const loginError = document.getElementById('loginError');
             const blForm = document.getElementById('blForm');
+            const userForm = document.getElementById('userForm');
             const formTitle = document.getElementById('form-title');
             const blIdInput = document.getElementById('bl_id');
             const searchForm = document.getElementById('searchForm');
             const tableBody = document.querySelector('#blTable tbody');
+            const usersTableBody = document.querySelector('#usersTable tbody');
             const groupSimilarCheckbox = document.getElementById('groupSimilar');
             const exportExcelBtn = document.getElementById('exportExcel');
             const exportPDFBtn = document.getElementById('exportPDF');
@@ -681,16 +743,20 @@
             const totalBlElement = document.getElementById('total-bl');
             const pendingBlElement = document.getElementById('pending-bl');
             const completedBlElement = document.getElementById('completed-bl');
+            const adminNavItem = document.getElementById('adminNavItem');
             const views = {
                 dashboard: document.getElementById('dashboard-view'),
-                'new-bl': document.getElementById('new-bl-view')
+                'new-bl': document.getElementById('new-bl-view'),
+                'user-management': document.getElementById('user-management-view')
             };
 
             // Données en mémoire
             let bls = [];
+            let users = [];
             let notificationHistoryItems = [];
             let editMode = false;
             let currentUserId = sessionStorage.getItem('userId') || 'Utilisateur';
+            let currentUserRole = sessionStorage.getItem('userRole') || 'standard';
 
             // Définir la date maximale pour les champs de date (aujourd'hui)
             function setMaxDateForInputs() {
@@ -724,18 +790,22 @@
                 loginContainer.style.display = 'none';
                 appContainer.style.display = 'flex';
                 userIdSpan.textContent = currentUserId;
+                if (currentUserRole === 'admin') {
+                    adminNavItem.style.display = 'inline-flex';
+                }
                 setMaxDateForInputs();
                 loadBLs();
+                updateUIForRole(currentUserRole);
             }
 
             // Gestion de la connexion
             loginForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 loginError.style.display = 'none';
-                const formData = new FormData(loginForm);
+                
                 const loginData = {
-                    id: formData.get('id'),
-                    password: formData.get('password')
+                    username: document.getElementById('login_id').value,
+                    password: document.getElementById('login_password').value
                 };
 
                 try {
@@ -747,13 +817,26 @@
                     const data = await res.json();
                     if (data.success) {
                         sessionStorage.setItem('isLoggedIn', 'true');
-                        sessionStorage.setItem('userId', loginData.id);
-                        userIdSpan.textContent = loginData.id;
+                        sessionStorage.setItem('userId', data.username);
+                        sessionStorage.setItem('userRole', data.role);
+                        
+                        currentUserId = data.username;
+                        currentUserRole = data.role;
+                        
+                        userIdSpan.textContent = data.username;
                         loginContainer.style.display = 'none';
                         appContainer.style.display = 'flex';
                         setMaxDateForInputs();
                         showNotification('Connexion réussie', 'success', 5000);
                         loadBLs();
+                        
+                        // Afficher menu admin si nécessaire
+                        if (data.role === 'admin') {
+                            adminNavItem.style.display = 'inline-flex';
+                            loadUsers();
+                        }
+                        
+                        updateUIForRole(data.role);
                     } else {
                         loginError.textContent = data.error || 'Identifiant ou mot de passe incorrect';
                         loginError.style.display = 'block';
@@ -765,6 +848,19 @@
                 }
             });
 
+            // Cacher les boutons suppression si pas admin
+            function updateUIForRole(role) {
+                if (role !== 'admin') {
+                    document.querySelectorAll('.delete-btn').forEach(btn => {
+                        btn.style.display = 'none';
+                    });
+                } else {
+                    document.querySelectorAll('.delete-btn').forEach(btn => {
+                        btn.style.display = 'inline-block';
+                    });
+                }
+            }
+
             // Gestion du profil et déconnexion
             toggleProfileBtn.addEventListener('click', () => {
                 profilePanel.classList.toggle('active');
@@ -773,9 +869,11 @@
             logoutBtn.addEventListener('click', () => {
                 sessionStorage.removeItem('isLoggedIn');
                 sessionStorage.removeItem('userId');
+                sessionStorage.removeItem('userRole');
                 loginContainer.style.display = 'flex';
                 appContainer.style.display = 'none';
                 profilePanel.classList.remove('active');
+                adminNavItem.style.display = 'none';
                 showNotification('Déconnexion réussie', 'info');
             });
             toggleNotificationsBtn.addEventListener('click', () => {
@@ -788,6 +886,7 @@
 
             // Événements
             blForm.addEventListener('submit', handleFormSubmit);
+            userForm.addEventListener('submit', handleUserFormSubmit);
             searchForm.addEventListener('submit', (e) => { e.preventDefault(); updateTable(); });
             searchForm.addEventListener('reset', () => setTimeout(updateTable, 50));
             groupSimilarCheckbox.addEventListener('change', updateTable);
@@ -802,6 +901,9 @@
                         navItems.forEach(nav => nav.classList.remove('active'));
                         this.classList.add('active');
                         if (view !== 'new-bl') resetForm();
+                        if (view === 'user-management' && currentUserRole === 'admin') {
+                            loadUsers();
+                        }
                     });
                 });
             }
@@ -855,6 +957,19 @@
                 }
             }
 
+            async function loadUsers() {
+                if (currentUserRole !== 'admin') return;
+                
+                try {
+                    const res = await fetch(USER_API_URL);
+                    users = await res.json();
+                    renderUsersTable(users);
+                } catch (error) {
+                    console.error('Erreur chargement utilisateurs:', error);
+                    showNotification('Erreur chargement utilisateurs', 'error');
+                }
+            }
+
             async function handleFormSubmit(e) {
                 e.preventDefault();
                 const formData = new FormData(blForm);
@@ -886,6 +1001,33 @@
                 } catch (e) {
                     showNotification("Erreur lors de l'enregistrement", "error");
                     console.error(e);
+                }
+            }
+
+            async function handleUserFormSubmit(e) {
+                e.preventDefault();
+                if (currentUserRole !== 'admin') return;
+                
+                const formData = new FormData(userForm);
+                const userData = Object.fromEntries(formData.entries());
+                
+                try {
+                    const res = await fetch(USER_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(userData)
+                    });
+                    const data = await res.json();
+                    if (data.message) {
+                        showNotification(data.message, 'success');
+                        userForm.reset();
+                        loadUsers();
+                    } else {
+                        showNotification(data.error || 'Erreur création utilisateur', 'error');
+                    }
+                } catch (error) {
+                    showNotification('Erreur création utilisateur', 'error');
+                    console.error(error);
                 }
             }
 
@@ -1035,7 +1177,7 @@
                             <td>
                                 <div class="action-buttons">
                                     <button class="edit-btn" data-id="${item.id}"><i class="fas fa-edit"></i> Modifier</button>
-                                    <button class="delete-btn" data-id="${item.id}"><i class="fas fa-trash"></i> Supprimer</button>
+                                    <button class="delete-btn" data-id="${item.id}" style="${currentUserRole !== 'admin' ? 'display: none;' : ''}"><i class="fas fa-trash"></i> Supprimer</button>
                                 </div>
                             </td>`;
                     }
@@ -1085,6 +1227,35 @@
                         const date = this.value;
                         updateEmpotageDate(id, date);
                     });
+                });
+            }
+
+            function renderUsersTable(users) {
+                usersTableBody.innerHTML = '';
+                if (!users.length) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="6" style="text-align:center; padding:2rem; color: var(--primary-blue); font-style: italic;">
+                        <i class="fas fa-users" style="font-size:1.5rem; margin-bottom:0.5rem; display:block;"></i>Aucun utilisateur trouvé
+                    </td>`;
+                    usersTableBody.appendChild(row);
+                    return;
+                }
+
+                users.forEach(user => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${user.id}</td>
+                        <td>${user.username}</td>
+                        <td>${user.role === 'admin' ? 'Administrateur' : 'Utilisateur Standard'}</td>
+                        <td>${new Date(user.created_at).toLocaleDateString('fr-FR')}</td>
+                        <td>${user.is_active ? 'Actif' : 'Inactif'}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="edit-btn" data-user-id="${user.id}"><i class="fas fa-edit"></i></button>
+                                <button class="delete-btn" data-user-id="${user.id}"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>`;
+                    usersTableBody.appendChild(tr);
                 });
             }
 
@@ -1164,7 +1335,7 @@
                     if (shouldGroup) data = groupSimilarBLs(data);
 
                     const logo = new Image();
-                    logo.src = 'logo_ace.png';
+                    logo.src = 'ace.png';
                     logo.crossOrigin = 'anonymous';
 
                     const generatePDF = () => {

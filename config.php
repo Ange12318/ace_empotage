@@ -1,8 +1,12 @@
 <?php
-// config.php : connexion PDO MySQL (XAMPP par défaut)
+// config.php : connexion PDO MySQL
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 $host = "localhost";
-$user = "root";   // utilisateur MySQL
-$pass = "";       // mot de passe (souvent vide sous XAMPP)
+$user = "root";
+$pass = "";
 $db   = "bl_management";
 
 try {
@@ -15,4 +19,35 @@ try {
     header("Content-Type: application/json");
     echo json_encode(["error" => "Erreur de connexion : " . $e->getMessage()]);
     exit;
+}
+
+// Fonctions utilitaires
+function isAuthenticated() {
+    return isset($_SESSION['user_id']);
+}
+
+function isAdmin() {
+    return isset($_SESSION['user_role']) && $_SESSION['user_role'] === 'admin';
+}
+
+function logAction($userId, $actionType, $details = '', $targetId = null, $targetTable = null) {
+    global $pdo;
+    
+    try {
+        $sql = "INSERT INTO user_actions (user_id, action_type, action_details, target_id, target_table, ip_address, user_agent) 
+                VALUES (:user_id, :action_type, :action_details, :target_id, :target_table, :ip_address, :user_agent)";
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([
+            ':user_id' => $userId,
+            ':action_type' => $actionType,
+            ':action_details' => $details,
+            ':target_id' => $targetId,
+            ':target_table' => $targetTable,
+            ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+            ':user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown'
+        ]);
+    } catch (Exception $e) {
+        error_log("Erreur journalisation: " . $e->getMessage());
+    }
 }

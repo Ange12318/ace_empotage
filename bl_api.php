@@ -3,7 +3,14 @@
 header("Content-Type: application/json; charset=utf-8");
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 
-require __DIR__ . "/config.php";
+require_once __DIR__ . "/config.php";
+
+// Vérifier l'authentification
+if (!isAuthenticated()) {
+    http_response_code(401);
+    echo json_encode(["error" => "Non authentifié"]);
+    exit;
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -40,7 +47,11 @@ if ($method === 'POST') {
         ':date_accord_banque' => $date_accord_banque,
         ':statut' => $statut
     ]);
-    echo json_encode(["message" => "BL ajouté avec succès", "id" => $pdo->lastInsertId()]);
+    
+    $newId = $pdo->lastInsertId();
+    logAction($_SESSION['user_id'], 'CREATE_BL', "Création BL #$newId", $newId, 'bl');
+    
+    echo json_encode(["message" => "BL ajouté avec succès", "id" => $newId]);
     exit;
 }
 
@@ -69,6 +80,9 @@ if ($method === 'PUT') {
         $sql = "UPDATE bl SET statut = :statut WHERE id = :id";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([':id' => $id, ':statut' => $statut]);
+        
+        logAction($_SESSION['user_id'], 'UPDATE_BL_STATUS', "Statut BL #$id changé à: $statut", $id, 'bl');
+        
         echo json_encode(["message" => "Statut mis à jour avec succès"]);
         exit;
     }
@@ -120,6 +134,9 @@ if ($method === 'PUT') {
             ':relance_r4' => $relances['relance_r4'],
             ':date_alerte_banque' => $relances['date_alerte_banque']
         ]);
+        
+        logAction($_SESSION['user_id'], 'UPDATE_BL_EMPOTAGE', "Date empotage BL #$id mise à jour", $id, 'bl');
+        
         echo json_encode(["message" => "Date d'empotage et relances mises à jour avec succès"]);
         exit;
     }
@@ -156,11 +173,21 @@ if ($method === 'PUT') {
         ':date_accord_banque' => $date_accord_banque,
         ':statut' => $statut
     ]);
+    
+    logAction($_SESSION['user_id'], 'UPDATE_BL', "Mise à jour BL #$id", $id, 'bl');
+    
     echo json_encode(["message" => "BL mis à jour avec succès"]);
     exit;
 }
 
 if ($method === 'DELETE') {
+    // Vérifier les droits administrateur
+    if (!isAdmin()) {
+        http_response_code(403);
+        echo json_encode(["error" => "Droits administrateur requis pour la suppression"]);
+        exit;
+    }
+    
     $input = json_decode(file_get_contents("php://input"), true) ?? [];
     $id = intval($input['id'] ?? 0);
 
@@ -180,10 +207,12 @@ if ($method === 'DELETE') {
 
     $stmt = $pdo->prepare("DELETE FROM bl WHERE id = :id");
     $stmt->execute([':id' => $id]);
+    
+    logAction($_SESSION['user_id'], 'DELETE_BL', "Suppression BL #$id", $id, 'bl');
+    
     echo json_encode(["message" => "BL supprimé avec succès"]);
     exit;
 }
 
 http_response_code(405);
 echo json_encode(["error" => "Méthode non autorisée"]);
-?>
