@@ -1,3 +1,4 @@
+<?php include 'datas.php'; ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -512,13 +513,13 @@
                                     <option value="SGCI">SGCI</option>
                                 </select>
                             </div>
-                            <div class="filter-group">
-                                <label for="search_transitaire">Transitaire</label>
-                                <select id="search_transitaire" name="transitaire">
-                                    <option value="">Tous les transitaires</option>
-                                    <option value="Moussa">Moussa</option>
-                                    <option value="Transitaire 2">Transitaire 2</option>
-                                    <option value="Transitaire 3">Transitaire 3</option>
+                             <div class="form-group">
+                                <label for="transitaire">Transitaire</label>
+                                <select id="transitaire" name="transitaire" required>
+                                    <option value="">Sélectionnez un transitaire</option>
+                                    <?php foreach ($transitaires as $t): ?>
+                                        <option value="<?= $t['nom'] ?>"><?= $t['nom'] ?></option>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="filter-group">
@@ -615,18 +616,19 @@
                                 <label for="client">Client</label>
                                 <select id="client" name="client" required>
                                     <option value="">Sélectionnez un client</option>
-                                    <option value="Client 1">Client 1</option>
-                                    <option value="Client 2">Client 2</option>
-                                    <option value="Client 3">Client 3</option>
+                                    <?php foreach ($clients as $c): ?>
+                                        <option value="<?= $c['nom'] ?>"><?= $c['nom'] ?></option>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
+
                             <div class="form-group">
                                 <label for="transitaire">Transitaire</label>
                                 <select id="transitaire" name="transitaire" required>
                                     <option value="">Sélectionnez un transitaire</option>
-                                    <option value="Moussa">Moussa</option>
-                                    <option value="Transitaire 2">Transitaire 2</option>
-                                    <option value="Transitaire 3">Transitaire 3</option>
+                                    <?php foreach ($transitaires as $t): ?>
+                                        <option value="<?= $t['nom'] ?>"><?= $t['nom'] ?></option>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="form-group">
