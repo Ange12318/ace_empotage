@@ -1,5 +1,5 @@
 <?php
-// --- Données fictives en dur ---
+
 
 // Liste des clients
 $clients = [
@@ -14,4 +14,16 @@ $transitaires = [
     ["nom" => "Transitaire 2"],
     [ "nom" => "Transitaire 3"],
      [ "nom" => "Transitaire 4"],
+     [ "nom" => "Transitaire 5"],
 ];
+
+// Liste des banques
+$banques = [
+    ["nom" => "SGBCI"],
+    ["nom" => "NSIA Banque"],
+    ["nom" => "Ecobank"],
+    ["nom" => "BACI"],
+    ["nom" => "UBA"],
+];
+
+

@@ -507,15 +507,14 @@
                                 <label for="search_banque">Banque</label>
                                 <select id="search_banque" name="banque">
                                     <option value="">Toutes les banques</option>
-                                    <option value="BNI">BNI</option>
-                                    <option value="Ecobank">Ecobank</option>
-                                    <option value="UBA">UBA</option>
-                                    <option value="SGCI">SGCI</option>
+                                      <?php foreach ($banques as $b): ?>
+                <option value="<?= $b['nom'] ?>"><?= $b['nom'] ?></option>
+            <?php endforeach; ?>
                                 </select>
                             </div>
                              <div class="form-group">
                                 <label for="transitaire">Transitaire</label>
-                                <select id="transitaire" name="transitaire" required>
+                                <select id="transitaire" name="transitaire">
                                     <option value="">Sélectionnez un transitaire</option>
                                     <?php foreach ($transitaires as $t): ?>
                                         <option value="<?= $t['nom'] ?>"><?= $t['nom'] ?></option>
@@ -602,16 +601,15 @@
                     <form id="blForm" class="bl-form">
                         <input type="hidden" id="bl_id" name="id">
                         <div class="form-grid">
-                            <div class="form-group">
-                                <label for="banque">Banque déposante</label>
-                                <select id="banque" name="banque" required>
-                                    <option value="">Sélectionnez une banque</option>
-                                    <option value="BNI">BNI</option>
-                                    <option value="Ecobank">Ecobank</option>
-                                    <option value="UBA">UBA</option>
-                                    <option value="SGCI">SGCI</option>
-                                </select>
-                            </div>
+                             <div class="form-group">
+        <label for="banque">Banque</label>
+        <select id="banque" name="banque" required>
+            <option value="">Sélectionnez une banque</option>
+            <?php foreach ($banques as $b): ?>
+                <option value="<?= $b['nom'] ?>"><?= $b['nom'] ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
                             <div class="form-group">
                                 <label for="client">Client</label>
                                 <select id="client" name="client" required>
