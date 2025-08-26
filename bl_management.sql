@@ -1,8 +1,11 @@
--- bl_management.sql : schéma MySQL
-CREATE DATABASE IF NOT EXISTS bl_management CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+-- Supprimer l'ancienne base si elle existe
+DROP DATABASE IF EXISTS bl_management;
+
+-- Créer une nouvelle base de données
+CREATE DATABASE bl_management CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 USE bl_management;
 
-DROP TABLE IF EXISTS bl;
+-- Table principale des BL
 CREATE TABLE bl (
     id INT AUTO_INCREMENT PRIMARY KEY,
     banque VARCHAR(100) NOT NULL,
@@ -21,6 +24,35 @@ CREATE TABLE bl (
     statut ENUM('pending','completed') DEFAULT 'pending'
 );
 
--- Optionnel : insérer un exemple
--- INSERT INTO bl (banque, client, transitaire, produit, numero_das, poids, date_accord_banque, date_empotage, statut)
--- VALUES ('BNI','Client 1','Moussa','Produit A','254ESE',4000,'2024-05-01','2024-05-05','pending');
+-- Table des utilisateurs
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('admin', 'standard') DEFAULT 'standard',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE
+);
+
+-- Table de journalisation des actions
+CREATE TABLE user_actions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    action_type VARCHAR(50) NOT NULL,
+    action_details TEXT,
+    target_id INT NULL,
+    target_table VARCHAR(50) NULL,
+    ip_address VARCHAR(45),
+    user_agent TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Insérer l'administrateur par défaut
+INSERT INTO users (username, password, role) 
+VALUES ('admin', 'admin123', 'admin');
+
+-- Optionnel : insérer un exemple de BL
+INSERT INTO bl (banque, client, transitaire, produit, numero_das, poids, date_accord_banque, date_empotage, statut)
+VALUES ('BNI', 'Client 1', 'Moussa', 'Produit A', '254ESE', 4000, '2024-05-01', '2024-05-05', 'pending');

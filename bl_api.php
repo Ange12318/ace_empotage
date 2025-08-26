@@ -32,10 +32,28 @@ if ($method === 'POST') {
     $numero_das = trim($input['numero_das'] ?? '');
     $poids = floatval($input['poids'] ?? 0);
     $date_accord_banque = $input['date_accord_banque'] ?: null;
+    $date_empotage = $input['date_empotage'] ?: null;
     $statut = in_array(($input['statut'] ?? 'pending'), ['pending', 'completed']) ? $input['statut'] : 'pending';
 
-    $sql = "INSERT INTO bl (banque, client, transitaire, produit, numero_das, poids, date_accord_banque, statut)
-            VALUES (:banque, :client, :transitaire, :produit, :numero_das, :poids, :date_accord_banque, :statut)";
+    // Calcul des relances
+    $relance_r1 = $relance_r2 = $relance_r3 = $date_alerte_banque = null;
+    if ($date_empotage) {
+        try {
+            $date = new DateTime($date_empotage);
+            $relance_r1 = (clone $date)->modify('+22 days')->format('Y-m-d');
+            $relance_r2 = (clone $date)->modify('+30 days')->format('Y-m-d');
+            $relance_r3 = (clone $date)->modify('+37 days')->format('Y-m-d');
+            $date_alerte_banque = (clone $date)->modify('+44 days')->format('Y-m-d');
+        } catch (Exception $e) {
+            http_response_code(400);
+            echo json_encode(["error" => "Date d'empotage invalide"]);
+            exit;
+        }
+    }
+
+    $sql = "INSERT INTO bl 
+            (banque, client, transitaire, produit, numero_das, poids, date_accord_banque, date_empotage, relance_r1, relance_r2, relance_r3, date_alerte_banque, statut)
+            VALUES (:banque, :client, :transitaire, :produit, :numero_das, :poids, :date_accord_banque, :date_empotage, :relance_r1, :relance_r2, :relance_r3, :date_alerte_banque, :statut)";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([
         ':banque' => $banque,
@@ -45,6 +63,11 @@ if ($method === 'POST') {
         ':numero_das' => $numero_das,
         ':poids' => $poids,
         ':date_accord_banque' => $date_accord_banque,
+        ':date_empotage' => $date_empotage,
+        ':relance_r1' => $relance_r1,
+        ':relance_r2' => $relance_r2,
+        ':relance_r3' => $relance_r3,
+        ':date_alerte_banque' => $date_alerte_banque,
         ':statut' => $statut
     ]);
     
@@ -66,11 +89,20 @@ if ($method === 'PUT') {
     }
 
     // Vérifier si le BL existe
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM bl WHERE id = :id");
+    $stmt = $pdo->prepare("SELECT * FROM bl WHERE id = :id");
     $stmt->execute([':id' => $id]);
-    if ($stmt->fetchColumn() == 0) {
+    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$existing) {
         http_response_code(404);
         echo json_encode(["error" => "BL non trouvé"]);
+        exit;
+    }
+
+    // Si on essaye de changer la date d’empotage alors qu’elle existe déjà → bloqué
+    if (isset($input['date_empotage']) && !empty($existing['date_empotage']) && $existing['date_empotage'] !== $input['date_empotage']) {
+        http_response_code(403);
+        echo json_encode(["error" => "La date d'empotage ne peut être modifiée que via l'action Modifier BL"]);
         exit;
     }
 
@@ -87,69 +119,26 @@ if ($method === 'PUT') {
         exit;
     }
 
-    // Mise à jour de la date d'empotage et calcul des relances
-    if (isset($input['date_empotage'])) {
-        $date_empotage = $input['date_empotage'] ?: null;
-        $relances = [];
-        if ($date_empotage) {
-            try {
-                $date = new DateTime($date_empotage);
-                $relances = [
-                    'relance_r1' => (clone $date)->modify('+22 days')->format('Y-m-d'),
-                    'relance_r2' => (clone $date)->modify('+29 days')->format('Y-m-d'),
-                    'relance_r3' => (clone $date)->modify('+36 days')->format('Y-m-d'),
-                    'relance_r4' => (clone $date)->modify('+43 days')->format('Y-m-d'),
-                    'date_alerte_banque' => (clone $date)->modify('+103 days')->format('Y-m-d')
-                ];
-            } catch (Exception $e) {
-                http_response_code(400);
-                echo json_encode(["error" => "Date d'empotage invalide"]);
-                exit;
-            }
-        } else {
-            $relances = [
-                'relance_r1' => null,
-                'relance_r2' => null,
-                'relance_r3' => null,
-                'relance_r4' => null,
-                'date_alerte_banque' => null
-            ];
-        }
+    // Mise à jour complète (y compris première saisie date_empotage)
+    $banque = trim($input['banque'] ?? $existing['banque']);
+    $client = trim($input['client'] ?? $existing['client']);
+    $transitaire = trim($input['transitaire'] ?? $existing['transitaire']);
+    $produit = trim($input['produit'] ?? $existing['produit']);
+    $numero_das = trim($input['numero_das'] ?? $existing['numero_das']);
+    $poids = floatval($input['poids'] ?? $existing['poids']);
+    $date_accord_banque = $input['date_accord_banque'] ?: $existing['date_accord_banque'];
+    $date_empotage = $input['date_empotage'] ?: $existing['date_empotage'];
+    $statut = in_array(($input['statut'] ?? $existing['statut']), ['pending', 'completed']) ? $input['statut'] : $existing['statut'];
 
-        $sql = "UPDATE bl SET 
-                date_empotage = :date_empotage,
-                relance_r1 = :relance_r1,
-                relance_r2 = :relance_r2,
-                relance_r3 = :relance_r3,
-                relance_r4 = :relance_r4,
-                date_alerte_banque = :date_alerte_banque
-                WHERE id = :id";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([
-            ':id' => $id,
-            ':date_empotage' => $date_empotage,
-            ':relance_r1' => $relances['relance_r1'],
-            ':relance_r2' => $relances['relance_r2'],
-            ':relance_r3' => $relances['relance_r3'],
-            ':relance_r4' => $relances['relance_r4'],
-            ':date_alerte_banque' => $relances['date_alerte_banque']
-        ]);
-        
-        logAction($_SESSION['user_id'], 'UPDATE_BL_EMPOTAGE', "Date empotage BL #$id mise à jour", $id, 'bl');
-        
-        echo json_encode(["message" => "Date d'empotage et relances mises à jour avec succès"]);
-        exit;
+    // Recalcul relances si date_empotage est fournie
+    $relance_r1 = $relance_r2 = $relance_r3 = $date_alerte_banque = null;
+    if ($date_empotage) {
+        $date = new DateTime($date_empotage);
+        $relance_r1 = (clone $date)->modify('+22 days')->format('Y-m-d');
+        $relance_r2 = (clone $date)->modify('+30 days')->format('Y-m-d');
+        $relance_r3 = (clone $date)->modify('+37 days')->format('Y-m-d');
+        $date_alerte_banque = (clone $date)->modify('+44 days')->format('Y-m-d');
     }
-
-    // Mise à jour complète d'un BL (sans date_empotage ni relances)
-    $banque = trim($input['banque'] ?? '');
-    $client = trim($input['client'] ?? '');
-    $transitaire = trim($input['transitaire'] ?? '');
-    $produit = trim($input['produit'] ?? '');
-    $numero_das = trim($input['numero_das'] ?? '');
-    $poids = floatval($input['poids'] ?? 0);
-    $date_accord_banque = $input['date_accord_banque'] ?: null;
-    $statut = in_array(($input['statut'] ?? 'pending'), ['pending', 'completed']) ? $input['statut'] : 'pending';
 
     $sql = "UPDATE bl SET 
             banque = :banque,
@@ -159,6 +148,11 @@ if ($method === 'PUT') {
             numero_das = :numero_das,
             poids = :poids,
             date_accord_banque = :date_accord_banque,
+            date_empotage = :date_empotage,
+            relance_r1 = :relance_r1,
+            relance_r2 = :relance_r2,
+            relance_r3 = :relance_r3,
+            date_alerte_banque = :date_alerte_banque,
             statut = :statut
             WHERE id = :id";
     $stmt = $pdo->prepare($sql);
@@ -171,6 +165,11 @@ if ($method === 'PUT') {
         ':numero_das' => $numero_das,
         ':poids' => $poids,
         ':date_accord_banque' => $date_accord_banque,
+        ':date_empotage' => $date_empotage,
+        ':relance_r1' => $relance_r1,
+        ':relance_r2' => $relance_r2,
+        ':relance_r3' => $relance_r3,
+        ':date_alerte_banque' => $date_alerte_banque,
         ':statut' => $statut
     ]);
     
